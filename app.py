@@ -172,27 +172,26 @@ import pandas as pd
 # ------------------------------
 # CONFIG
 # ------------------------------
+
 st.set_page_config(page_title="Digital Mental Health Support", layout="wide")
 
-# Use env var or Streamlit secrets for the Hugging Face key.
-# DO NOT hard-code your key in this file if you will publish it.
+# Hard-coded API key
 HF_API_KEY = "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"
-API_URL = "https://api-inference.huggingface.co/models/deepset/roberta-base-squad2"
-headers = {"Authorization": "Bearer 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"}
 
-def query_hf(payload):
-    """
-    Send payload to the HF Inference API and return JSON.
-    Payload format depends on the model. For SQuAD-style models:
-      {"inputs": {"question": "...", "context": "..."}}
-    """
+# Use a QA model, not the token URL
+API_URL = "https://api-inference.huggingface.co/models/deepset/roberta-base-squad2"
+headers = {"Authorization": f"Bearer {HF_API_KEY}"}
+
+def query_hf(question, context):
+    payload = {"inputs": {"question": question, "context": context}}
     try:
         resp = requests.post(API_URL, headers=headers, json=payload, timeout=30)
         resp.raise_for_status()
         return resp.json()
-    except Exception as e:
-        # Do not leak exception details to UI; return None to fallback
+    except Exception:
         return None
+
+
 
 # ------------------------------
 # APP SECTIONS
@@ -242,13 +241,12 @@ if choice == "AI Chatbot":
             )
             if HF_API_KEY:
                 payload = {"inputs": {"question": user_text, "context": context}}
-                output = query_hf(payload)
-                # deepset/roberta-base-squad2 returns dict like {"answer": "...", "score": ...}
-                if isinstance(output, dict) and "answer" in output and output["answer"]:
-                    bot_reply = output["answer"]
-                else:
-                    # fallback conversational reply
-                    bot_reply = "I'm here to listen — could you tell me a little more about how you're feeling?"
+                output = query_hf(user_text, context)
+                    if output and "answer" in output and output["answer"]:
+                            bot_reply = output["answer"]
+                    else:
+                            bot_reply = "I'm here to listen — could you tell me a little more about how you're feeling?"
+
             else:
                 # No API key -> fallback to lightweight replies
                 if any(k in lowered for k in ["stress", "anxiety", "burnout", "depressed", "sleep"]):
@@ -346,6 +344,7 @@ elif choice == "Admin Dashboard":
     st.altair_chart(chart, use_container_width=True)
 
     st.metric("Total Resources Played", plays)
+
 
 
 
