@@ -242,10 +242,10 @@ if choice == "AI Chatbot":
             if HF_API_KEY:
                 payload = {"inputs": {"question": user_text, "context": context}}
                 output = query_hf(user_text, context)
-                    if output and "answer" in output and output["answer"]:
-                            bot_reply = output["answer"]
-                    else:
-                            bot_reply = "I'm here to listen — could you tell me a little more about how you're feeling?"
+                if output and "answer" in output and output["answer"]:
+                        bot_reply = output["answer"]
+                else:
+                        bot_reply = "I'm here to listen — could you tell me a little more about how you're feeling?"
 
             else:
                 # No API key -> fallback to lightweight replies
@@ -344,6 +344,7 @@ elif choice == "Admin Dashboard":
     st.altair_chart(chart, use_container_width=True)
 
     st.metric("Total Resources Played", plays)
+
 
 
 
