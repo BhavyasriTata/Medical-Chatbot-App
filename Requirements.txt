@@ -1,10 +1,6 @@
 streamlit
+pandas
+altair
+python-multipart
 transformers
 torch
-
-
-
-pip install streamlit pandas altair python-multipart
-pip install transformers torch
-
-
