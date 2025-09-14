@@ -177,7 +177,7 @@ st.set_page_config(page_title="Digital Mental Health Support", layout="wide")
 # Use env var or Streamlit secrets for the Hugging Face key.
 # DO NOT hard-code your key in this file if you will publish it.
 HF_API_KEY = "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"
-API_URL = "https://huggingface.co/settings/tokens/new?tokenType=fineGrained"
+API_URL = "https://api-inference.huggingface.co/models/deepset/roberta-base-squad2"
 headers = {"Authorization": "Bearer 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"}
 
 def query_hf(payload):
@@ -346,6 +346,7 @@ elif choice == "Admin Dashboard":
     st.altair_chart(chart, use_container_width=True)
 
     st.metric("Total Resources Played", plays)
+
 
 
 
