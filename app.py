@@ -203,19 +203,38 @@ if menu == "Chatbot":
 
         user_input = st.text_input("Say something to the bot", key="chat_input")
         send = st.button("Send")
-        if send and user_input.strip():
-            # rule-based reply
-            lower = user_input.lower()
-            if 'phq' in lower or 'screen' in lower:
-                st.session_state['chat_history'].append({'role':'bot','text':"Starting PHQ-9 screening. Click the 'Start PHQ-9' button below."})
-            elif any(x in lower for x in ['suicide','kill myself','hurt myself','immediate danger']):
-                st.session_state['chat_history'].append({'role':'bot','text':"If you are in immediate danger, please call local emergency services. Would you like me to help you book a counsellor?"})
-            elif any(x in lower for x in ['anxiety','stress','depressed','sad','sleep']):
-                st.session_state['chat_history'].append({'role':'bot','text':"I'm sorry you're feeling that way. Try 4-4-4 breathing (inhale 4s, hold 4s, exhale 4s). Would you like an audio relaxation resource?"})
-            else:
-                st.session_state['chat_history'].append({'role':'bot','text':"Thanks for sharing. If you'd like, run the PHQ-9 screening or book a counsellor."})
-            st.session_state['chat_history'].append({'role':'user','text':user_input})
-            save_chat(token, session_id, None, user_input, 'user')
+        from transformers import pipeline
+        if "qa_model" not in st.session_state:
+            st.session_state.qa_model = pipeline("text-generation", model="gpt2")  # light model
+            if send and user_input.strip():
+                user_text = user_input.strip()
+                st.session_state['chat_history'].append({'role':'user','text':user_text})
+                save_chat(token, session_id, None, user_text, 'user')
+                try:
+                    result = st.session_state.qa_model(user_text, max_length=80, num_return_sequences=1, do_sample=True)
+                    bot_reply = result[0]['generated_text']
+                    bot_reply = bot_reply[len(user_text):].strip() if bot_reply.startswith(user_text) else bot_reply
+                    if not bot_reply:
+                        bot_reply = "I'm here to listen. Could you tell me more about how you're feeling?"
+                except Exception as e:
+                    bot_reply = "Sorry, I couldn't process that right now."
+                    st.session_state['chat_history'].append({'role':'bot','text':bot_reply})
+                    save_chat(token, session_id, None, bot_reply, 'bot')
+
+        # if send and user_input.strip():
+        #     # rule-based reply
+        #     lower = user_input.lower()
+        #     if 'phq' in lower or 'screen' in lower:
+        #         st.session_state['chat_history'].append({'role':'bot','text':"Starting PHQ-9 screening. Click the 'Start PHQ-9' button below."})
+        #     elif any(x in lower for x in ['suicide','kill myself','hurt myself','immediate danger']):
+        #         st.session_state['chat_history'].append({'role':'bot','text':"If you are in immediate danger, please call local emergency services. Would you like me to help you book a counsellor?"})
+        #     elif any(x in lower for x in ['anxiety','stress','depressed','sad','sleep']):
+        #         st.session_state['chat_history'].append({'role':'bot','text':"I'm sorry you're feeling that way. Try 4-4-4 breathing (inhale 4s, hold 4s, exhale 4s). Would you like an audio relaxation resource?"})
+        #     else:
+        #         st.session_state['chat_history'].append({'role':'bot','text':"Thanks for sharing. If you'd like, run the PHQ-9 screening or book a counsellor."})
+        #     st.session_state['chat_history'].append({'role':'user','text':user_input})
+        #     save_chat(token, session_id, None, user_input, 'user')
+    
 
     with col2:
         st.markdown("### Quick actions")
@@ -359,3 +378,4 @@ elif menu == "Admin":
 
 st.sidebar.markdown("---")
 st.sidebar.write("Privacy: This app generates an anonymous token in your browser and does not collect names or IDs. Admin sees only aggregated counts (plays/bookings/screenings).")
+
