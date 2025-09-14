@@ -176,7 +176,7 @@ st.set_page_config(page_title="Digital Mental Health Support", layout="wide")
 
 # Use env var or Streamlit secrets for the Hugging Face key.
 # DO NOT hard-code your key in this file if you will publish it.
-HF_API_KEY = os.environ.get("HF_API_KEY") or st.secrets.get("HF_API_KEY", None)
+HF_API_KEY = os.environ.get("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") or st.secrets.get("HF_API_KEY", None)
 if not HF_API_KEY:
     st.warning("HuggingFace API key not set. Set HF_API_KEY in environment or Streamlit secrets for AI responses.")
 # Choose a stable inference model for Q&A (works well for definitions)
@@ -349,6 +349,7 @@ elif choice == "Admin Dashboard":
     st.altair_chart(chart, use_container_width=True)
 
     st.metric("Total Resources Played", plays)
+
 
 
 
