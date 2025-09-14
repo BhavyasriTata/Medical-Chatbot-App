@@ -1,6 +1,4 @@
 streamlit
 pandas
 altair
-python-multipart
-transformers
-torch
+requests
