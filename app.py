@@ -176,7 +176,7 @@ import pandas as pd
 st.set_page_config(page_title="Digital Mental Health Support", layout="wide")
 
 # Hard-coded API key
-HF_API_KEY = "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"
+HF_API_KEY = "Secret"
 
 # Use a QA model, not the token URL
 API_URL = "https://api-inference.huggingface.co/models/deepset/roberta-base-squad2"
@@ -344,6 +344,7 @@ elif choice == "Admin Dashboard":
     st.altair_chart(chart, use_container_width=True)
 
     st.metric("Total Resources Played", plays)
+
 
 
 
