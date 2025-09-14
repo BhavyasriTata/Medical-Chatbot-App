@@ -16,6 +16,21 @@ def query(payload):
     response = requests.post(API_URL, headers=headers, json=payload)
     return response.json()
 
+# In chatbot section
+context = """
+Stress is a state of mental or emotional strain caused by challenging situations.
+It can affect both mind and body, leading to anxiety, sleep problems, or health issues.
+"""
+output = query({
+    "inputs": {
+        "question": user_text,
+        "context": context
+    }
+})
+
+bot_reply = output.get("answer", "I'm here to listen. Could you share more?")
+
+
 # ------------------------------
 # APP SECTIONS
 # ------------------------------
@@ -45,12 +60,21 @@ if choice == "AI Chatbot":
         else:
             try:
                 output = query({"inputs": user_text})
-                bot_reply = output.get("generated_text", "I'm here to listen, could you tell me more?")
-            except:
-                bot_reply = "Sorry, I couldn’t process that right now."
+                if isinstance(output, list) and "generated_text" in output[0]:
+                    bot_reply = output[0]["generated_text"]
+                elif "generated_text" in output:
+                    bot_reply = output["generated_text"]
+                else:
+                    bot_reply = "I'm here to listen. Could you share more?"
+                    st.session_state['chat_history'].append({'role':'bot','text':bot_reply})
 
-        st.session_state['chat_history'].append({'role':'bot','text':bot_reply})
 
+            #     output = query({"inputs": user_text})
+            #     bot_reply = output.get("generated_text", "I'm here to listen, could you tell me more?")
+            # except:
+            #     bot_reply = "Sorry, I couldn’t process that right now."
+
+        
     # Display chat
     for msg in st.session_state['chat_history']:
         if msg['role'] == 'user':
@@ -130,3 +154,4 @@ elif choice == "Admin Dashboard":
     st.altair_chart(chart, use_container_width=True)
 
     st.metric("Total Resources Played", plays)
+
