@@ -66,7 +66,11 @@ if choice == "AI Chatbot":
                     bot_reply = output["generated_text"]
                 else:
                     bot_reply = "I'm here to listen. Could you share more?"
-                    st.session_state['chat_history'].append({'role':'bot','text':bot_reply})
+            except Exception as e:
+                bot_reply = "Sorry, I couldn’t process that right now."
+
+        # Always append bot reply
+        st.session_state['chat_history'].append({'role': 'bot', 'text': bot_reply})
 
 
             #     output = query({"inputs": user_text})
@@ -154,4 +158,5 @@ elif choice == "Admin Dashboard":
     st.altair_chart(chart, use_container_width=True)
 
     st.metric("Total Resources Played", plays)
+
 
