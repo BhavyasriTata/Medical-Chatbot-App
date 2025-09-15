@@ -13,9 +13,17 @@ st.set_page_config(page_title="Digital Mental Health Support", layout="wide")
 
 # IMPORTANT: Replace with your actual Hugging Face API Key
 # You can get one here: https://huggingface.co/settings/tokens
-HF_API_KEY = "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" 
+# HF_API_KEY = "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" 
 
-headers = {"Authorization": f"Bearer {HF_API_KEY}"}
+# headers = {"Authorization": f"Bearer {HF_API_KEY}"}
+import google.generativeai as genai
+
+# Replace with your Gemini API Key
+GEMINI_API_KEY = "AIzaSyCQq6fVNQT7F6Gi4BqtMw4CE-r96xhPI6w"
+genai.configure(api_key=GEMINI_API_KEY)
+
+# Choose Gemini model
+gemini_model = genai.GenerativeModel("gemini-pro")
 
 # ------------------------------
 # APP SECTIONS
@@ -48,46 +56,59 @@ Your core principles are:
 """
     
     # Updated query function for conversational models
-    def query_hf_conversational(history):
-        prompt_messages = []
-        for msg in history:
-            role = "user" if msg["role"] == "user" else "assistant"
-            prompt_messages.append({"role": role, "content": msg["text"]})
+    # def query_hf_conversational(history):
+    #     prompt_messages = []
+    #     for msg in history:
+    #         role = "user" if msg["role"] == "user" else "assistant"
+    #         prompt_messages.append({"role": role, "content": msg["text"]})
         
-        # Manually format the prompt string for the Mistral model
-        formatted_prompt = ""
-        for message in prompt_messages:
-            if message["role"] == "user":
-                formatted_prompt += f"[INST] {message['content']} [/INST]"
-            else:
-                formatted_prompt += f"{message['content']} "
+    #     # Manually format the prompt string for the Mistral model
+    #     formatted_prompt = ""
+    #     for message in prompt_messages:
+    #         if message["role"] == "user":
+    #             formatted_prompt += f"[INST] {message['content']} [/INST]"
+    #         else:
+    #             formatted_prompt += f"{message['content']} "
 
-        payload = {
-            "inputs": formatted_prompt,
-            "parameters": {
-                "max_new_tokens": 250,
-                "temperature": 0.7,
-                "return_full_text": False,
-            }
-        }
+    #     payload = {
+    #         "inputs": formatted_prompt,
+    #         "parameters": {
+    #             "max_new_tokens": 250,
+    #             "temperature": 0.7,
+    #             "return_full_text": False,
+    #         }
+    #     }
+    #     try:
+    #         resp = requests.post(API_URL, headers=headers, json=payload, timeout=60) # Increased timeout to 60s
+    #         # Check if the response is not OK
+    #         if resp.status_code != 200:
+    #             # Check for the specific "model is loading" error
+    #             error_data = resp.json()
+    #             if "error" in error_data and "estimated_time" in error_data:
+    #                 wait_time = int(error_data["estimated_time"])
+    #                 st.warning(f"🤖 The AI model is starting up. Please wait about {wait_time} seconds and try again.", icon="⏳")
+    #                 return None
+    #             else:
+    #                 # For other errors, show the raw error message
+    #                 st.error(f"API Error ({resp.status_code}): {resp.text}")
+    #                 return None
+    #         return resp.json()[0]['generated_text']
+    #     except requests.exceptions.RequestException as e:
+    #         st.error(f"Error communicating with the API: {e}")
+    #         return None
+    def query_gemini(prompt, history):
+        formatted_history = ""
+        for msg in history:
+            role = "User" if msg["role"] == "user" else "Aura"
+            formatted_history += f"{role}: {msg['text']}\n" 
+        formatted_history += f"User: {prompt}\nAura:"
         try:
-            resp = requests.post(API_URL, headers=headers, json=payload, timeout=60) # Increased timeout to 60s
-            # Check if the response is not OK
-            if resp.status_code != 200:
-                # Check for the specific "model is loading" error
-                error_data = resp.json()
-                if "error" in error_data and "estimated_time" in error_data:
-                    wait_time = int(error_data["estimated_time"])
-                    st.warning(f"🤖 The AI model is starting up. Please wait about {wait_time} seconds and try again.", icon="⏳")
-                    return None
-                else:
-                    # For other errors, show the raw error message
-                    st.error(f"API Error ({resp.status_code}): {resp.text}")
-                    return None
-            return resp.json()[0]['generated_text']
-        except requests.exceptions.RequestException as e:
-            st.error(f"Error communicating with the API: {e}")
+            response = gemini_model.generate_content(formatted_history)
+            return response.text
+        except Exception as e:
+            st.error(f"Gemini API Error: {e}")
             return None
+
 
     # Initialize chat history
     if "chat_history" not in st.session_state:
@@ -114,7 +135,9 @@ Your core principles are:
             history_for_api = [{"role": "user", "text": SYSTEM_PROMPT}] + st.session_state.chat_history
             
             with st.spinner("Aura is thinking..."):
-                bot_reply_text = query_hf_conversational(history_for_api)
+                bot_reply_text = query_gemini(user_text, st.session_state.chat_history)
+
+                # bot_reply_text = query_hf_conversational(history_for_api)
 
             if bot_reply_text:
                 bot_reply = bot_reply_text
@@ -229,5 +252,6 @@ elif choice == "Admin Dashboard":
     st.altair_chart(chart, use_container_width=True)
 
     st.metric("Total Resource Views", plays)
+
 
 
