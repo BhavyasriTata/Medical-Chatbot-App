@@ -133,7 +133,7 @@ elif choice == "Resources":
     elif resource_type == "Texts":
         st.download_button(
             "📥 Download Wellness Guide (PDF)",
-            data=" Self-care means taking the time to do things that help you live well and improve both your physical health and mental health. This can help you manage stress, lower your risk of illness, and increase your energy. Even small acts of self-care in your daily life can have a big impact.
+            data=""" Self-care means taking the time to do things that help you live well and improve both your physical health and mental health. This can help you manage stress, lower your risk of illness, and increase your energy. Even small acts of self-care in your daily life can have a big impact.
 
 Here are some self-care tips:
 
@@ -160,7 +160,7 @@ Identify and challenge your negative and unhelpful thoughts.
 Stay connected.
 Reach out to friends or family members who can provide emotional support and practical help.
 Self-care looks different for everyone, and it is important to find what you need and enjoy.
-It may take trial and error to discover what works best for you. ",
+It may take trial and error to discover what works best for you. """,
             file_name="wellness_guide.txt",
         )
 
@@ -208,6 +208,7 @@ elif choice == "Admin Dashboard":
     st.altair_chart(chart, use_container_width=True)
 
     st.metric("Total Resources Played", plays)
+
 
 
 
