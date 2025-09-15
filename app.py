@@ -47,7 +47,7 @@ Your core principles are:
 5.  *Maintain Persona:* Always be calm, supportive, and kind. Keep your responses concise.
 """
     
-    Updated query function for conversational models
+    # Updated query function for conversational models
     def query_hf_conversational(history):
         prompt_messages = []
         for msg in history:
@@ -232,6 +232,7 @@ elif choice == "Admin Dashboard":
     st.altair_chart(chart, use_container_width=True)
 
     st.metric("Total Resource Views", plays)
+
 
 
 
