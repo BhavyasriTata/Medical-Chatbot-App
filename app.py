@@ -16,6 +16,7 @@ st.set_page_config(page_title="Digital Mental Health Support", layout="wide")
 # HF_API_KEY = "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" 
 
 # headers = {"Authorization": f"Bearer {HF_API_KEY}"}
+import google.generativeai as genai
 
 # Replace with your Gemini API Key
 GEMINI_API_KEY = "AIzaSyCQq6fVNQT7F6Gi4BqtMw4CE-r96xhPI6w"
@@ -251,6 +252,7 @@ elif choice == "Admin Dashboard":
     st.altair_chart(chart, use_container_width=True)
 
     st.metric("Total Resource Views", plays)
+
 
 
 
