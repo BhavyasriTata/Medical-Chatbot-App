@@ -71,11 +71,22 @@ Your core principles are:
             }
         }
         try:
-            resp = requests.post(API_URL, headers=headers, json=payload, timeout=45)
-            resp.raise_for_status()
+            resp = requests.post(API_URL, headers=headers, json=payload, timeout=60) # Increased timeout to 60s
+            # Check if the response is not OK
+            if resp.status_code != 200:
+                # Check for the specific "model is loading" error
+                error_data = resp.json()
+                if "error" in error_data and "estimated_time" in error_data:
+                    wait_time = int(error_data["estimated_time"])
+                    st.warning(f"🤖 The AI model is starting up. Please wait about {wait_time} seconds and try again.", icon="⏳")
+                    return None
+                else:
+                    # For other errors, show the raw error message
+                    st.error(f"API Error ({resp.status_code}): {resp.text}")
+                    return None
             return resp.json()[0]['generated_text']
-        except Exception as e:
-            st.error(f"Error communicating with the model: {e}")
+        except requests.exceptions.RequestException as e:
+            st.error(f"Error communicating with the API: {e}")
             return None
 
     # Initialize chat history
@@ -218,4 +229,5 @@ elif choice == "Admin Dashboard":
     st.altair_chart(chart, use_container_width=True)
 
     st.metric("Total Resource Views", plays)
+
 
