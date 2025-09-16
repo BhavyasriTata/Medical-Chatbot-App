@@ -334,6 +334,7 @@ def page_booking():
             conn.commit()
             conn.close()
             st.success("Booking request saved. Counselors will follow up through provided contact (if given).")
+
 def page_resources():
     st.header("4) Psychoeducational Resource Hub")
     conn = get_conn()
@@ -341,11 +342,9 @@ def page_resources():
     c.execute("SELECT id, title, type, language, url, description FROM resources")
     rows = c.fetchall()
     df = pd.DataFrame(rows, columns=["id","title","type","language","url","description"])
-    
-    # Filters
     languages = ["All"] + sorted(df["language"].dropna().unique().tolist())
     lang = st.selectbox("Filter by language", languages)
-    typ = st.selectbox("Filter by type", ["All","article","video","audio","text"])
+    typ = st.selectbox("Filter by type", ["All","article","video","audio"])
     q = st.text_input("Search title/description")
     filt = df.copy()
     
@@ -355,61 +354,12 @@ def page_resources():
         filt = filt[filt["type"]==typ]
     if q:
         filt = filt[filt["title"].str.contains(q, case=False) | filt["description"].str.contains(q, case=False)]
-    
-    # Resource display
     for _, r in filt.iterrows():
         st.subheader(r["title"])
-        st.write(f"**Type:** {r['type']}  •  **Language:** {r['language']}")
+        st.write(f"Type: {r['type']}  •  Language: {r['language']}")
         st.write(r["description"])
-
-        # --- Resource type specific rendering ---
-        if r["type"].lower() == "video" and r["https://www.youtube.com/watch?v=1vx8iUvfyCY"]:
-            st.video(r["https://www.youtube.com/watch?v=1vx8iUvfyCY"])
-        elif r["type"].lower() == "audio" and r["url"]:
-            st.audio(r["url"])
-        elif r["type"].lower() == "text":
-            st.download_button(
-                "📥 Download Text Resource",
-                data=r["description"],  # using description as text file
-                file_name=f"{r['title'].replace(' ', '_')}.txt",
-            )
-
-        # --- Tracking "Mark as Viewed/Played" ---
-        if "plays" not in st.session_state:
-            st.session_state["plays"] = 0
-        if st.button(f"✅ Mark {r['title']} as Viewed/Played", key=f"play_{r['id']}"):
-            st.session_state["plays"] += 1
-            st.success(f"Thank you for using {r['title']} 🙏")
-
-        st.markdown("---")  # separator between resources
-
-
-
-# def page_resources():
-#     st.header("4) Psychoeducational Resource Hub")
-#     conn = get_conn()
-#     c = conn.cursor()
-#     c.execute("SELECT id, title, type, language, url, description FROM resources")
-#     rows = c.fetchall()
-#     df = pd.DataFrame(rows, columns=["id","title","type","language","url","description"])
-#     languages = ["All"] + sorted(df["language"].dropna().unique().tolist())
-#     lang = st.selectbox("Filter by language", languages)
-#     typ = st.selectbox("Filter by type", ["All","article","video","audio"])
-#     q = st.text_input("Search title/description")
-#     filt = df.copy()
-    
-#     if lang != "All":
-#         filt = filt[filt["language"]==lang]
-#     if typ != "All":
-#         filt = filt[filt["type"]==typ]
-#     if q:
-#         filt = filt[filt["title"].str.contains(q, case=False) | filt["description"].str.contains(q, case=False)]
-#     for _, r in filt.iterrows():
-#         st.subheader(r["title"])
-#         st.write(f"Type: {r['type']}  •  Language: {r['language']}")
-#         st.write(r["description"])
-#         if r["url"]:
-#             st.markdown(f"[Open resource]({r['url']})")
+        if r["url"]:
+            st.markdown(f"[Open resource]({r['url']})")
 
 def page_forum():
     st.header("5) Peer Support Forum (Anonymous, Moderated)")
@@ -542,6 +492,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
