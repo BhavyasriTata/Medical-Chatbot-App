@@ -19,10 +19,10 @@ if USE_OPENAI:
 DB_PATH = "mental_platform.db"
 FERNET_KEY = os.getenv("FERNET_KEY")  # optional — base64 key from Fernet.generate_key()
 MOD_PASSWORD = os.getenv("MOD_PASSWORD", "modpass123")  # Change in deployment
-EMERGENCY_HELPLINE =  "Please reach out for immediate help. You are not alone.\n\n"
-                "📞 *National Suicide Prevention Lifeline (India):* 9152987821\n"
-                "📞 *KIRAN Mental Health Helpline:* 1800-599-0019\n\n"
-                "If you are in immediate danger, please call your local emergency services."
+EMERGENCY_HELPLINE =  "Please reach out for immediate help. You are not alone.\n\n
+                📞 *National Suicide Prevention Lifeline (India):* 9152987821\n
+                📞 *KIRAN Mental Health Helpline:* 1800-599-0019\n\n
+                If you are in immediate danger, please call your local emergency services."
 
 
 # Screening thresholds (PHQ-9)
@@ -562,6 +562,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
