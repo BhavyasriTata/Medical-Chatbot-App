@@ -266,7 +266,7 @@ def page_screening():
             if phq9_score >= 15 or gad7_score >= 15 or int(phq9_answers[-1])>0:
                 st.warning("Your responses suggest moderate-to-severe symptoms or suicidal thoughts — we recommend contacting a professional immediately.")
                 st.write(EMERGENCY_HELPLINE)
-                if st.button("Book counsellor now"):
+                if st.form_submit_button("Book counsellor now"):
                     st.session_state.get("book_now", True)
                 else:
                     st.write("Here are some immediate coping suggestions:")
@@ -488,5 +488,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
