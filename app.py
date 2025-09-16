@@ -363,8 +363,8 @@ def page_resources():
         st.write(r["description"])
 
         # --- Resource type specific rendering ---
-        if r["type"].lower() == "video" and r["url"]:
-            st.video(r["url"])
+        if r["type"].lower() == "video" and r["https://www.youtube.com/watch?v=1vx8iUvfyCY"]:
+            st.video(r["https://www.youtube.com/watch?v=1vx8iUvfyCY"])
         elif r["type"].lower() == "audio" and r["url"]:
             st.audio(r["url"])
         elif r["type"].lower() == "text":
@@ -542,6 +542,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
