@@ -336,30 +336,69 @@ def page_booking():
             st.success("Booking request saved. Counselors will follow up through provided contact (if given).")
 
 def page_resources():
-    st.header("4) Psychoeducational Resource Hub")
-    conn = get_conn()
-    c = conn.cursor()
-    c.execute("SELECT id, title, type, language, url, description FROM resources")
-    rows = c.fetchall()
-    df = pd.DataFrame(rows, columns=["id","title","type","language","url","description"])
-    languages = ["All"] + sorted(df["language"].dropna().unique().tolist())
-    lang = st.selectbox("Filter by language", languages)
-    typ = st.selectbox("Filter by type", ["All","article","video","audio"])
-    q = st.text_input("Search title/description")
-    filt = df.copy()
+    st.title("🎧 Mental Health Resources Hub")
+
+    # Let user choose type
+    resource_type = st.radio("Choose Resource Type", ["Videos", "Audios", "Texts"])
+
+    # Display content based on type
+    if resource_type == "Videos":
+        st.subheader("🧘 Guided Meditation Video")
+        st.video("https://www.youtube.com/watch?v=1vx8iUvfyCY")  # Example meditation video
+
+    elif resource_type == "Audios":
+        st.subheader("🎵 Relaxing Audio")
+        st.audio("https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3")
+
+    elif resource_type == "Texts":
+        st.subheader("📖 Wellness Guide")
+        st.write(
+            "Self-care means taking the time to do things that help you live well and "
+            "improve both your physical health and mental health. This can help you manage stress, "
+            "lower your risk of illness, and increase your energy. Even small acts of self-care "
+            "in your daily life can have a big impact."
+        )
+        st.download_button(
+            "📥 Download Wellness Guide (TXT)",
+            data="Self-care means taking the time to do things that help you live well and improve both your physical health and mental health. "
+                 "This can help you manage stress, lower your risk of illness, and increase your energy. "
+                 "Even small acts of self-care in your daily life can have a big impact.",
+            file_name="wellness_guide.txt",
+        )
+
+    # Track how many resources are viewed/played
+    if "plays" not in st.session_state:
+        st.session_state["plays"] = 0
+
+    if st.button("✅ Mark as Viewed/Played"):
+        st.session_state["plays"] += 1
+        st.success(f"Thank you for using this resource 🙏 (Total used: {st.session_state['plays']})")
+
+# def page_resources():
+#     st.header("4) Psychoeducational Resource Hub")
+#     conn = get_conn()
+#     c = conn.cursor()
+#     c.execute("SELECT id, title, type, language, url, description FROM resources")
+#     rows = c.fetchall()
+#     df = pd.DataFrame(rows, columns=["id","title","type","language","url","description"])
+#     languages = ["All"] + sorted(df["language"].dropna().unique().tolist())
+#     lang = st.selectbox("Filter by language", languages)
+#     typ = st.selectbox("Filter by type", ["All","article","video","audio"])
+#     q = st.text_input("Search title/description")
+#     filt = df.copy()
     
-    if lang != "All":
-        filt = filt[filt["language"]==lang]
-    if typ != "All":
-        filt = filt[filt["type"]==typ]
-    if q:
-        filt = filt[filt["title"].str.contains(q, case=False) | filt["description"].str.contains(q, case=False)]
-    for _, r in filt.iterrows():
-        st.subheader(r["title"])
-        st.write(f"Type: {r['type']}  •  Language: {r['language']}")
-        st.write(r["description"])
-        if r["url"]:
-            st.markdown(f"[Open resource]({r['url']})")
+#     if lang != "All":
+#         filt = filt[filt["language"]==lang]
+#     if typ != "All":
+#         filt = filt[filt["type"]==typ]
+#     if q:
+#         filt = filt[filt["title"].str.contains(q, case=False) | filt["description"].str.contains(q, case=False)]
+#     for _, r in filt.iterrows():
+#         st.subheader(r["title"])
+#         st.write(f"Type: {r['type']}  •  Language: {r['language']}")
+#         st.write(r["description"])
+#         if r["url"]:
+#             st.markdown(f"[Open resource]({r['url']})")
 
 def page_forum():
     st.header("5) Peer Support Forum (Anonymous, Moderated)")
@@ -492,6 +531,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
