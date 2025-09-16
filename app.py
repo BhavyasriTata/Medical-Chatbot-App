@@ -34,7 +34,6 @@ if choice == "AI Chatbot":
     )
 
     # Use a better, conversational model
-    API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
 
     # Define the chatbot's persona and instructions
     SYSTEM_PROMPT = """You are 'Aura', a caring and empathetic AI mental health companion. Your purpose is to provide a safe, non-judgmental space for users to express their feelings.
@@ -191,6 +190,7 @@ elif choice == "Admin Dashboard":
     st.altair_chart(chart, use_container_width=True)
 
     st.metric("Total Resource Views", plays)
+
 
 
 
