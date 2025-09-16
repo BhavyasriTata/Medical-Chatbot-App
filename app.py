@@ -124,7 +124,7 @@ def query_hf_conversational(history):
 
 
 
-    Initialize chat history
+    # Initialize chat history
     if "chat_history" not in st.session_state:
         st.session_state["chat_history"] = []
 
@@ -265,6 +265,7 @@ elif choice == "Admin Dashboard":
     st.altair_chart(chart, use_container_width=True)
 
     st.metric("Total Resource Views", plays)
+
 
 
 
