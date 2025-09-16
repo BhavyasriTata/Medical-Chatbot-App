@@ -8,7 +8,6 @@ import datetime
 import json
 import random
 import hashlib
-from cryptography.fernet import Fernet, InvalidToken
 from pathlib import Path
 
 # Optional OpenAI usage (only if OPENAI_API_KEY set)
@@ -489,3 +488,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
