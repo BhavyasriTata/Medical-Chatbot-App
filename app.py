@@ -179,7 +179,8 @@ def query_hf_conversational(history):
 # ------------------------------
 # 2. BOOKING SYSTEM
 # ------------------------------
- elif choice == "Book a Session":
+ elif 
+choice == "Book a Session":
     st.title("📅 Confidential Counselling Booking")
 
     name = st.text_input("Your Name (Optional — kept confidential)")
@@ -277,6 +278,7 @@ elif choice == "Admin Dashboard":
     st.altair_chart(chart, use_container_width=True)
 
     st.metric("Total Resource Views", plays)
+
 
 
 
