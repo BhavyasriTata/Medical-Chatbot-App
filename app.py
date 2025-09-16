@@ -92,6 +92,44 @@ Your core principles are:
                 except Exception as e:
                     st.error(f"An unexpected error occurred: {e}")
                     return None
+                    if "chat_history" not in st.session_state:
+        st.session_state["chat_history"] = []
+
+    user_input = st.chat_input("How are you feeling today?")
+
+    if user_input:
+        user_text = user_input.strip()
+        st.session_state.chat_history.append({"role": "user", "text": user_text})
+
+        # Safety-first rule-based check
+        lowered = user_text.lower()
+        crisis_terms = ["suicide", "kill myself", "end my life", "want to die", "hurt myself"]
+        if any(term in lowered for term in crisis_terms):
+            bot_reply = (
+                "⚠ It sounds like you are in significant distress. Your safety is the most important thing. "
+                "Please reach out for immediate help. You are not alone.\n\n"
+                "📞 *National Suicide Prevention Lifeline (India):* 9152987821\n"
+                "📞 *KIRAN Mental Health Helpline:* 1800-599-0019\n\n"
+                "If you are in immediate danger, please call your local emergency services."
+            )
+        else:
+            history_for_api = [{"role": "user", "text": SYSTEM_PROMPT}] + st.session_state.chat_history
+            
+            with st.spinner("Aura is thinking..."):
+                bot_reply_text = query_hf_conversational(history_for_api)
+
+            if bot_reply_text:
+                bot_reply = bot_reply_text
+            else:
+                bot_reply = "I'm sorry, I'm having a little trouble connecting right now. Please know that I'm here to listen."
+
+        st.session_state.chat_history.append({"role": "bot", "text": bot_reply})
+
+    # Display chat history
+    for msg in st.session_state.chat_history:
+        with st.chat_message("user" if msg["role"] == "user" else "assistant", avatar="👤" if msg["role"] == "user" else "🤖"):
+            st.markdown(msg["text"])
+
 
 
 
@@ -198,6 +236,7 @@ elif choice == "Admin Dashboard":
     st.altair_chart(chart, use_container_width=True)
 
     st.metric("Total Resources Played", plays)
+
 
 
 
