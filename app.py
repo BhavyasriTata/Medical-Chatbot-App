@@ -48,46 +48,91 @@ Your core principles are:
 """
     
     # Updated query function for conversational models
-    def query_hf_conversational(history):
-        prompt_messages = []
-        for msg in history:
-            role = "user" if msg["role"] == "user" else "assistant"
-            prompt_messages.append({"role": role, "content": msg["text"]})
-        
-        # Manually format the prompt string for the Mistral model
-        formatted_prompt = ""
-        for message in prompt_messages:
-            if message["role"] == "user":
-                formatted_prompt += f"[INST] {message['content']} [/INST]"
-            else:
-                formatted_prompt += f"{message['content']} "
+    #
+# REPLACE the old query_hf_conversational function with this one
+#
+def query_hf_conversational(history):
+    # (The top part of the function stays the same)
+    prompt_messages = []
+    for msg in history:
+        role = "user" if msg["role"] == "user" else "assistant"
+        prompt_messages.append({"role": role, "content": msg["text"]})
+    
+    formatted_prompt = ""
+    for message in prompt_messages:
+        if message["role"] == "user":
+            formatted_prompt += f"[INST] {message['content']} [/INST]"
+        else:
+            formatted_prompt += f"{message['content']} "
 
-        payload = {
-            "inputs": formatted_prompt,
-            "parameters": {
-                "max_new_tokens": 250,
-                "temperature": 0.7,
-                "return_full_text": False,
-            }
+    payload = {
+        "inputs": formatted_prompt,
+        "parameters": {
+            "max_new_tokens": 250,
+            "temperature": 0.7,
+            "return_full_text": False,
         }
-        try:
-            resp = requests.post(API_URL, headers=headers, json=payload, timeout=60) # Increased timeout to 60s
-            # Check if the response is not OK
-            if resp.status_code != 200:
-                # Check for the specific "model is loading" error
-                error_data = resp.json()
-                if "error" in error_data and "estimated_time" in error_data:
-                    wait_time = int(error_data["estimated_time"])
-                    st.warning(f"🤖 The AI model is starting up. Please wait about {wait_time} seconds and try again.", icon="⏳")
-                    return None
-                else:
-                    # For other errors, show the raw error message
-                    st.error(f"API Error ({resp.status_code}): {resp.text}")
-                    return None
-            return resp.json()[0]['generated_text']
-        except requests.exceptions.RequestException as e:
-            st.error(f"Error communicating with the API: {e}")
-            return None
+    }
+    
+    # --- THIS IS THE IMPROVED PART ---
+    try:
+        resp = requests.post(API_URL, headers=headers, json=payload, timeout=45)
+        # This line will raise an error for bad responses (4xx or 5xx)
+        resp.raise_for_status() 
+        return resp.json()[0]['generated_text']
+        
+    except requests.exceptions.HTTPError as err:
+        # This will catch specific HTTP errors from the server
+        st.error(f"API Error: {err.response.status_code} - {err.response.text}")
+        if err.response.status_code == 401:
+             st.error("This is an 'Unauthorized' error. Please double-check that your Hugging Face API key is correct.")
+        elif "is currently loading" in err.response.text:
+             st.error("The model is still loading on the server. Please try again in a few minutes.")
+        return None
+    except Exception as e:
+        # This will catch other errors like timeouts or connection problems
+        st.error(f"An unexpected error occurred: {e}")
+        return None
+    # def query_hf_conversational(history):
+    #     prompt_messages = []
+    #     for msg in history:
+    #         role = "user" if msg["role"] == "user" else "assistant"
+    #         prompt_messages.append({"role": role, "content": msg["text"]})
+        
+    #     # Manually format the prompt string for the Mistral model
+    #     formatted_prompt = ""
+    #     for message in prompt_messages:
+    #         if message["role"] == "user":
+    #             formatted_prompt += f"[INST] {message['content']} [/INST]"
+    #         else:
+    #             formatted_prompt += f"{message['content']} "
+
+    #     payload = {
+    #         "inputs": formatted_prompt,
+    #         "parameters": {
+    #             "max_new_tokens": 250,
+    #             "temperature": 0.7,
+    #             "return_full_text": False,
+    #         }
+    #     }
+    #     try:
+    #         resp = requests.post(API_URL, headers=headers, json=payload, timeout=60) # Increased timeout to 60s
+    #         # Check if the response is not OK
+    #         if resp.status_code != 200:
+    #             # Check for the specific "model is loading" error
+    #             error_data = resp.json()
+    #             if "error" in error_data and "estimated_time" in error_data:
+    #                 wait_time = int(error_data["estimated_time"])
+    #                 st.warning(f"🤖 The AI model is starting up. Please wait about {wait_time} seconds and try again.", icon="⏳")
+    #                 return None
+    #             else:
+    #                 # For other errors, show the raw error message
+    #                 st.error(f"API Error ({resp.status_code}): {resp.text}")
+    #                 return None
+    #         return resp.json()[0]['generated_text']
+    #     except requests.exceptions.RequestException as e:
+    #         st.error(f"Error communicating with the API: {e}")
+    #         return None
     #
 
 
@@ -234,6 +279,7 @@ elif choice == "Admin Dashboard":
     st.altair_chart(chart, use_container_width=True)
 
     st.metric("Total Resource Views", plays)
+
 
 
 
