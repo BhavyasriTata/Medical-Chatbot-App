@@ -16,6 +16,8 @@ st.set_page_config(page_title="Digital Mental Health Support", layout="wide")
 HF_API_KEY = "Your_HuggingFace_API_Key_Here" 
 
 headers = {"Authorization": f"Bearer {HF_API_KEY}"}
+API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
+
 
 # ------------------------------
 # APP SECTIONS
@@ -190,6 +192,7 @@ elif choice == "Admin Dashboard":
     st.altair_chart(chart, use_container_width=True)
 
     st.metric("Total Resource Views", plays)
+
 
 
 
