@@ -78,20 +78,20 @@ Your core principles are:
                             "return_full_text": False,
                         }
                     }
-                    try:
-                        resp = requests.post(API_URL, headers=headers, json=payload, timeout=45)
-                        resp.raise_for_status()  # raises for 4xx or 5xx
-                        return resp.json()[0]['generated_text']
-                    except requests.exceptions.HTTPError as err:
-                        st.error(f"API Error: {err.response.status_code} - {err.response.text}")
-                        if err.response.status_code == 401:
-                            st.error("Unauthorized: Please double-check that your Hugging Face API key is correct.")
-                        elif "is currently loading" in err.response.text:
-                            st.error("The model is still loading on the server. Please try again in a few minutes.")
-                            return None
-                    except Exception as e:
-                        st.error(f"An unexpected error occurred: {e}")
+                try:
+                    resp = requests.post(API_URL, headers=headers, json=payload, timeout=45)
+                    resp.raise_for_status()  # raises for 4xx or 5xx
+                    return resp.json()[0]['generated_text']
+                except requests.exceptions.HTTPError as err:
+                    st.error(f"API Error: {err.response.status_code} - {err.response.text}")
+                    if err.response.status_code == 401:
+                        st.error("Unauthorized: Please double-check that your Hugging Face API key is correct.")
+                    elif "is currently loading" in err.response.text:
+                        st.error("The model is still loading on the server. Please try again in a few minutes.")
                         return None
+                except Exception as e:
+                    st.error(f"An unexpected error occurred: {e}")
+                    return None
 
 
 
@@ -198,6 +198,7 @@ elif choice == "Admin Dashboard":
     st.altair_chart(chart, use_container_width=True)
 
     st.metric("Total Resources Played", plays)
+
 
 
 
