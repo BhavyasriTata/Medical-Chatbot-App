@@ -537,10 +537,39 @@ def page_admin():
 
 
 # ---------- APP START ----------
+
+
+
+# def main():
+#     st.set_page_config(page_title="Digital Psychological Intervention System", layout="wide")
+#     init_db()
+#     seed_sample_resources()
+
+#     pages = {
+#         "Home": page_home,
+#         "Screening": page_screening,
+#         "First-aid Chat": page_first_aid_chat,
+#         "Booking": page_booking,
+#         "Resources": page_resources,
+#         "Peer Forum": page_forum,
+#         "Admin": page_admin
+#     }
+#     st.sidebar.title("Navigation")
+#     choice = st.sidebar.radio("Go to", list(pages.keys()))
+#     # emergency message
+#     st.sidebar.markdown("### Emergency / Helpline")
+#     st.sidebar.write(EMERGENCY_HELPLINE)
+
+#     # run selected page
+#     pages[choice]()
+
+# if __name__ == "__main__":
+#     main()
+
+
+
 def main():
     st.set_page_config(page_title="Digital Psychological Intervention System", layout="wide")
-    init_db()
-    seed_sample_resources()
 
     pages = {
         "Home": page_home,
@@ -551,14 +580,60 @@ def main():
         "Peer Forum": page_forum,
         "Admin": page_admin
     }
-    st.sidebar.title("Navigation")
-    choice = st.sidebar.radio("Go to", list(pages.keys()))
-    # emergency message
-    st.sidebar.markdown("### Emergency / Helpline")
-    st.sidebar.write(EMERGENCY_HELPLINE)
 
-    # run selected page
-    pages[choice]()
+    # Session state to store selected page
+    if "current_page" not in st.session_state:
+        st.session_state.current_page = "Home"
+
+    # Display dashboard cards only on Home
+    if st.session_state.current_page == "Home":
+        st.title("💻 Digital Psychological Intervention System")
+        st.subheader("Choose a section to continue:")
+
+        # Create clickable colorful cards (tiles)
+        cols = st.columns(3, gap="large")
+
+        card_styles = {
+            "Screening": "#FFB74D",      # Orange
+            "First-aid Chat": "#4DB6AC", # Teal
+            "Booking": "#64B5F6",        # Blue
+            "Resources": "#81C784",      # Green
+            "Peer Forum": "#BA68C8",     # Purple
+            "Admin": "#E57373"           # Red
+        }
+
+        # Create cards dynamically
+        features = list(pages.keys())[1:]  # exclude Home
+        for i, feature in enumerate(features):
+            with cols[i % 3]:
+                if st.button(feature, key=feature, help=f"Go to {feature}",
+                             use_container_width=True):
+                    st.session_state.current_page = feature
+
+                st.markdown(
+                    f"""
+                    <div style="
+                        background-color:{card_styles[feature]};
+                        padding:20px;
+                        border-radius:15px;
+                        text-align:center;
+                        font-size:18px;
+                        font-weight:bold;
+                        color:white;
+                        cursor:pointer;">
+                        {feature}
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+                st.write("")
+
+    # Run selected page
+    if st.session_state.current_page != "Home":
+        pages[st.session_state.current_page]()
+        if st.button("⬅️ Back to Home"):
+            st.session_state.current_page = "Home"
+
 
 if __name__ == "__main__":
     main()
