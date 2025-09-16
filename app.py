@@ -571,8 +571,19 @@ import streamlit as st
 
 # Example placeholder functions for each page
 def page_home():
-    st.title("🏠 Home")
-    st.write("Welcome to the Digital Psychological Intervention System.")
+    st.title("Digital Psychological Intervention System — College Pilot")
+    st.markdown("""
+    This platform provides:
+    - **AI-guided first-aid chat** (optional OpenAI or rule-based fallback),
+    - **Screening (PHQ-9 / GAD-7)**,
+    - **Confidential appointment booking**,
+    - **Psychoeducational resource hub (regional languages)**,
+    - **Peer support forum**,
+    - **Admin dashboard** (anonymous analytics).
+    """)
+    st.info("This is a prototype. For emergencies see the helpline at the top-right or contact local emergency services.")
+    st.sidebar.markdown("## Quick actions\n- Take screening\n- Chat with First Aid\n- Book Counsellor")
+
 
 def page_screening():
     st.title("🧠 Screening")
@@ -671,6 +682,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
