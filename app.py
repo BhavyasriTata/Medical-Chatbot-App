@@ -567,7 +567,41 @@ def page_admin():
 #     main()
 
 
+import streamlit as st
 
+# Example placeholder functions for each page
+def page_home():
+    st.title("🏠 Home")
+    st.write("Welcome to the Digital Psychological Intervention System.")
+
+def page_screening():
+    st.title("🧠 Screening")
+    st.write("Take a mental health screening test.")
+
+def page_first_aid_chat():
+    st.title("💬 First-aid Chat")
+    st.write("Chat with our AI mental health assistant.")
+
+def page_booking():
+    st.title("📅 Booking")
+    st.write("Book a session with a counselor.")
+
+def page_resources():
+    st.title("📚 Resources")
+    st.write("Browse articles, videos, and guides.")
+
+def page_forum():
+    st.title("👥 Peer Forum")
+    st.write("Join the student peer support forum.")
+
+def page_admin():
+    st.title("⚙️ Admin")
+    st.write("Admin panel for managing data and reports.")
+
+
+# -------------------------
+# MAIN APP
+# -------------------------
 def main():
     st.set_page_config(page_title="Digital Psychological Intervention System", layout="wide")
 
@@ -637,8 +671,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
 
 
 
