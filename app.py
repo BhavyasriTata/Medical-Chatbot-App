@@ -59,48 +59,39 @@ Your core principles are:
 4.  *Safety First:* You are NOT a therapist. Do not give medical advice.
 5.  *Maintain Persona:* Always be calm, supportive, and kind. Keep your responses concise.
 """
-    
-    # Updated query function for conversational models
-    # REPLACE the old query_hf_conversational function with this one
-def query_hf_conversational(history):
-    prompt_messages = []
-    for msg in history:
-        role = "user" if msg["role"] == "user" else "assistant"
-        prompt_messages.append({"role": role, "content": msg["text"]})
-    
-    formatted_prompt = ""
-    for message in prompt_messages:
-        if message["role"] == "user":
-            formatted_prompt += f"[INST] {message['content']} [/INST]"
-        else:
-            formatted_prompt += f"{message['content']} "
-
-    payload = {
-        "inputs": formatted_prompt,
-        "parameters": {
-            "max_new_tokens": 250,
-            "temperature": 0.7,
-            "return_full_text": False,
-        }
-    }
-    
-    # --- IMPROVED ERROR HANDLING ---
-    try:
-        resp = requests.post(API_URL, headers=headers, json=payload, timeout=45)
-        resp.raise_for_status()  # raises for 4xx or 5xx
-        return resp.json()[0]['generated_text']
-        
-    except requests.exceptions.HTTPError as err:
-        st.error(f"API Error: {err.response.status_code} - {err.response.text}")
-        if err.response.status_code == 401:
-            st.error("Unauthorized: Please double-check that your Hugging Face API key is correct.")
-        elif "is currently loading" in err.response.text:
-            st.error("The model is still loading on the server. Please try again in a few minutes.")
-        return None
-
-    except Exception as e:
-        st.error(f"An unexpected error occurred: {e}")
-        return None
+    def query_hf_conversational(history):
+        prompt_messages = []
+        for msg in history:
+            role = "user" if msg["role"] == "user" else "assistant"
+            prompt_messages.append({"role": role, "content": msg["text"]})
+            formatted_prompt = ""
+            for message in prompt_messages:
+                if message["role"] == "user":
+                    formatted_prompt += f"[INST] {message['content']} [/INST]"
+                else:
+                    formatted_prompt += f"{message['content']} "
+                    payload = {
+                        "inputs": formatted_prompt,
+                        "parameters": {
+                            "max_new_tokens": 250,
+                            "temperature": 0.7,
+                            "return_full_text": False,
+                        }
+                    }
+                    try:
+                        resp = requests.post(API_URL, headers=headers, json=payload, timeout=45)
+                        resp.raise_for_status()  # raises for 4xx or 5xx
+                        return resp.json()[0]['generated_text']
+                    except requests.exceptions.HTTPError as err:
+                        st.error(f"API Error: {err.response.status_code} - {err.response.text}")
+                        if err.response.status_code == 401:
+                            st.error("Unauthorized: Please double-check that your Hugging Face API key is correct.")
+                        elif "is currently loading" in err.response.text:
+                            st.error("The model is still loading on the server. Please try again in a few minutes.")
+                            return None
+                    except Exception as e:
+                        st.error(f"An unexpected error occurred: {e}")
+                        return None
 
 
 
@@ -207,5 +198,6 @@ elif choice == "Admin Dashboard":
     st.altair_chart(chart, use_container_width=True)
 
     st.metric("Total Resources Played", plays)
+
 
 
