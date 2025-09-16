@@ -173,13 +173,13 @@ def rule_based_response(user_text, last_screening=None):
             ),
             "escalate": True
         }
-    if last_screening:
-        phq9, gad7 = last_screening
-        if phq9 >= 15 or gad7 >= 15:
-            return {
-                "message": "I see your screening scores indicate moderate-to-severe symptoms. I recommend booking with a counsellor. Would you like to book an appointment now? You can also reach immediate support via the helpline.",
-                "escalate": False
-            }
+    # if last_screening:
+    #     phq9, gad7 = last_screening
+    #     if phq9 >= 15 or gad7 >= 15:
+    #         return {
+    #             "message": "I see your screening scores indicate moderate-to-severe symptoms. I recommend booking with a counsellor. Would you like to book an appointment now? You can also reach immediate support via the helpline.",
+    #             "escalate": False
+    #         }
     # generic coping tips
     tips = [
         "Take slow deep breaths for a minute — breathe in for 4, hold 2, out for 6.",
@@ -951,5 +951,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
