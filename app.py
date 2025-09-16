@@ -201,69 +201,7 @@ def call_openai_chat(prompt):
     return resp.choices[0].message.content.strip()
 
 # ---------- UI PAGES ----------
-import streamlit as st
 
-# Map pages to functions
-PAGES = {
-    "Home": "page_home",
-    "Screening": "page_screening",
-    "First Aid Chat": "page_first_aid_chat",
-    "Book a Session": "page_booking",
-    "Resources": "page_resources",
-    "Peer Forum": "page_forum",
-    "Admin Dashboard": "page_admin",
-}
-
-# Colors for cards
-COLORS = {
-    "Home": "#4CAF50",
-    "Screening": "#2196F3",
-    "First Aid Chat": "#FF9800",
-    "Book a Session": "#9C27B0",
-    "Resources": "#009688",
-    "Peer Forum": "#FF5722",
-    "Admin Dashboard": "#607D8B",
-}
-
-def main():
-    st.set_page_config(page_title="Digital Psychological Intervention System", layout="wide")
-
-    st.title("💡 Digital Psychological Intervention System — College Pilot")
-    st.markdown("Select a feature below:")
-
-    # Arrange clickable cards in rows
-    cols = st.columns(3)
-    page_names = list(PAGES.keys())
-
-    for i, page in enumerate(page_names):
-        with cols[i % 3]:
-            if st.button(page, key=page, use_container_width=True):
-                st.session_state["page"] = page
-
-            # Styling the button
-            st.markdown(
-                f"""
-                <style>
-                div.stButton > button:first-child {{
-                    background-color: {COLORS[page]};
-                    color: white;
-                    font-size: 18px;
-                    height: 100px;
-                    border-radius: 12px;
-                }}
-                </style>
-                """,
-                unsafe_allow_html=True,
-            )
-
-    # Default page
-    if "page" not in st.session_state:
-        st.session_state["page"] = "Home"
-
-    # Call the right function dynamically
-    eval(f"{PAGES[st.session_state['page']]}()")
-
-# Then keep all your page_xxx() functions defined below
 
 def page_home():
     st.title("Digital Psychological Intervention System — College Pilot")
@@ -552,5 +490,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
