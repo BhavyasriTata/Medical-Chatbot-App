@@ -334,7 +334,6 @@ def page_booking():
             conn.commit()
             conn.close()
             st.success("Booking request saved. Counselors will follow up through provided contact (if given).")
-
 def page_resources():
     st.header("4) Psychoeducational Resource Hub")
     conn = get_conn()
@@ -342,23 +341,76 @@ def page_resources():
     c.execute("SELECT id, title, type, language, url, description FROM resources")
     rows = c.fetchall()
     df = pd.DataFrame(rows, columns=["id","title","type","language","url","description"])
+    
+    # Filters
     languages = ["All"] + sorted(df["language"].dropna().unique().tolist())
     lang = st.selectbox("Filter by language", languages)
-    typ = st.selectbox("Filter by type", ["All","article","video","audio"])
+    typ = st.selectbox("Filter by type", ["All","article","video","audio","text"])
     q = st.text_input("Search title/description")
     filt = df.copy()
+    
     if lang != "All":
         filt = filt[filt["language"]==lang]
     if typ != "All":
         filt = filt[filt["type"]==typ]
     if q:
         filt = filt[filt["title"].str.contains(q, case=False) | filt["description"].str.contains(q, case=False)]
+    
+    # Resource display
     for _, r in filt.iterrows():
         st.subheader(r["title"])
-        st.write(f"Type: {r['type']}  •  Language: {r['language']}")
+        st.write(f"**Type:** {r['type']}  •  **Language:** {r['language']}")
         st.write(r["description"])
-        if r["url"]:
-            st.markdown(f"[Open resource]({r['url']})")
+
+        # --- Resource type specific rendering ---
+        if r["type"].lower() == "video" and r["url"]:
+            st.video(r["url"])
+        elif r["type"].lower() == "audio" and r["url"]:
+            st.audio(r["url"])
+        elif r["type"].lower() == "text":
+            st.download_button(
+                "📥 Download Text Resource",
+                data=r["description"],  # using description as sample text
+                file_name=f"{r['title'].replace(' ', '_')}.txt",
+            )
+        elif r["url"]:
+            st.markdown(f"[🌐 Open resource]({r['url']})", unsafe_allow_html=True)
+
+        # --- Tracking "Mark as Viewed/Played" ---
+        if "plays" not in st.session_state:
+            st.session_state["plays"] = 0
+        if st.button(f"✅ Mark {r['title']} as Viewed/Played", key=f"play_{r['id']}"):
+            st.session_state["plays"] += 1
+            st.success(f"Thank you for using {r['title']} 🙏")
+
+        st.markdown("---")  # separator between resources
+
+
+# def page_resources():
+#     st.header("4) Psychoeducational Resource Hub")
+#     conn = get_conn()
+#     c = conn.cursor()
+#     c.execute("SELECT id, title, type, language, url, description FROM resources")
+#     rows = c.fetchall()
+#     df = pd.DataFrame(rows, columns=["id","title","type","language","url","description"])
+#     languages = ["All"] + sorted(df["language"].dropna().unique().tolist())
+#     lang = st.selectbox("Filter by language", languages)
+#     typ = st.selectbox("Filter by type", ["All","article","video","audio"])
+#     q = st.text_input("Search title/description")
+#     filt = df.copy()
+    
+#     if lang != "All":
+#         filt = filt[filt["language"]==lang]
+#     if typ != "All":
+#         filt = filt[filt["type"]==typ]
+#     if q:
+#         filt = filt[filt["title"].str.contains(q, case=False) | filt["description"].str.contains(q, case=False)]
+#     for _, r in filt.iterrows():
+#         st.subheader(r["title"])
+#         st.write(f"Type: {r['type']}  •  Language: {r['language']}")
+#         st.write(r["description"])
+#         if r["url"]:
+#             st.markdown(f"[Open resource]({r['url']})")
 
 def page_forum():
     st.header("5) Peer Support Forum (Anonymous, Moderated)")
@@ -464,26 +516,6 @@ def page_admin():
         csv = dfa.to_csv(index=False)
         st.download_button("Download CSV", csv, file_name="screenings_anon.csv", mime="text/csv")
 
-# ---------- UI NAVIGATION ----------
-PAGES = {
-    "Home": "page_home",
-    "Screening": "page_screening",
-    "First Aid Chat": "page_first_aid_chat",
-    "Book a Session": "page_booking",
-    "Resources": "page_resources",
-    "Peer Forum": "page_forum",
-    "Admin Dashboard": "page_admin",
-}
-
-PAGE_STYLES = {
-    "Home": {"color": "#4CAF50", "icon": "🏠"},
-    "Screening": {"color": "#2196F3", "icon": "📝"},
-    "First Aid Chat": {"color": "#FF9800", "icon": "💬"},
-    "Book a Session": {"color": "#9C27B0", "icon": "📅"},
-    "Resources": {"color": "#009688", "icon": "📚"},
-    "Peer Forum": {"color": "#FF5722", "icon": "🤝"},
-    "Admin Dashboard": {"color": "#607D8B", "icon": "📊"},
-}
 
 # ---------- APP START ----------
 def main():
@@ -511,6 +543,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
