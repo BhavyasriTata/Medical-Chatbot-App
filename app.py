@@ -93,46 +93,6 @@ def query_hf_conversational(history):
         # This will catch other errors like timeouts or connection problems
         st.error(f"An unexpected error occurred: {e}")
         return None
-    # def query_hf_conversational(history):
-    #     prompt_messages = []
-    #     for msg in history:
-    #         role = "user" if msg["role"] == "user" else "assistant"
-    #         prompt_messages.append({"role": role, "content": msg["text"]})
-        
-    #     # Manually format the prompt string for the Mistral model
-    #     formatted_prompt = ""
-    #     for message in prompt_messages:
-    #         if message["role"] == "user":
-    #             formatted_prompt += f"[INST] {message['content']} [/INST]"
-    #         else:
-    #             formatted_prompt += f"{message['content']} "
-
-    #     payload = {
-    #         "inputs": formatted_prompt,
-    #         "parameters": {
-    #             "max_new_tokens": 250,
-    #             "temperature": 0.7,
-    #             "return_full_text": False,
-    #         }
-    #     }
-    #     try:
-    #         resp = requests.post(API_URL, headers=headers, json=payload, timeout=60) # Increased timeout to 60s
-    #         # Check if the response is not OK
-    #         if resp.status_code != 200:
-    #             # Check for the specific "model is loading" error
-    #             error_data = resp.json()
-    #             if "error" in error_data and "estimated_time" in error_data:
-    #                 wait_time = int(error_data["estimated_time"])
-    #                 st.warning(f"🤖 The AI model is starting up. Please wait about {wait_time} seconds and try again.", icon="⏳")
-    #                 return None
-    #             else:
-    #                 # For other errors, show the raw error message
-    #                 st.error(f"API Error ({resp.status_code}): {resp.text}")
-    #                 return None
-    #         return resp.json()[0]['generated_text']
-    #     except requests.exceptions.RequestException as e:
-    #         st.error(f"Error communicating with the API: {e}")
-    #         return None
     #
 
 
@@ -279,6 +239,7 @@ elif choice == "Admin Dashboard":
     st.altair_chart(chart, use_container_width=True)
 
     st.metric("Total Resource Views", plays)
+
 
 
 
