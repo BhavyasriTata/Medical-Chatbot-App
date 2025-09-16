@@ -26,26 +26,26 @@ choice = st.sidebar.radio("Navigate", menu)
 # ------------------------------
 # 1. AI CHATBOT (UPGRADED)
 # ------------------------------
-if choice == "AI Chatbot":
-    st.title("🤖 AI-Guided First Aid Chatbot")
-    st.write(
-        "A confidential space to explore your feelings. Please note this is "
-        "*not a substitute for professional therapy*."
-    )
+# if choice == "AI Chatbot":
+#     st.title("🤖 AI-Guided First Aid Chatbot")
+#     st.write(
+#         "A confidential space to explore your feelings. Please note this is "
+#         "*not a substitute for professional therapy*."
+#     )
 
-    # Use a better, conversational model
-    API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
+#     # Use a better, conversational model
+#     API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
 
-    # Define the chatbot's persona and instructions
-    SYSTEM_PROMPT = """You are 'Aura', a caring and empathetic AI mental health companion. Your purpose is to provide a safe, non-judgmental space for users to express their feelings.
+#     # Define the chatbot's persona and instructions
+#     SYSTEM_PROMPT = """You are 'Aura', a caring and empathetic AI mental health companion. Your purpose is to provide a safe, non-judgmental space for users to express their feelings.
 
-Your core principles are:
-1.  *Empathy and Validation:* Always validate the user's feelings. Use phrases like "That sounds incredibly difficult," "It makes sense that you would feel that way," or "Thank you for sharing that with me."
-2.  *Active Listening:* Ask thoughtful, open-ended questions to encourage the user to explore their feelings. For example, "How has that been affecting you?" or "What's on your mind when you feel that way?"
-3.  *Gentle Guidance:* You can suggest simple, evidence-based coping strategies (like deep breathing, grounding, or journaling) but NEVER present them as a cure. Introduce them gently.
-4.  *Safety First:* You are NOT a therapist. Do not give medical advice.
-5.  *Maintain Persona:* Always be calm, supportive, and kind. Keep your responses concise.
-"""
+# Your core principles are:
+# 1.  *Empathy and Validation:* Always validate the user's feelings. Use phrases like "That sounds incredibly difficult," "It makes sense that you would feel that way," or "Thank you for sharing that with me."
+# 2.  *Active Listening:* Ask thoughtful, open-ended questions to encourage the user to explore their feelings. For example, "How has that been affecting you?" or "What's on your mind when you feel that way?"
+# 3.  *Gentle Guidance:* You can suggest simple, evidence-based coping strategies (like deep breathing, grounding, or journaling) but NEVER present them as a cure. Introduce them gently.
+# 4.  *Safety First:* You are NOT a therapist. Do not give medical advice.
+# 5.  *Maintain Persona:* Always be calm, supportive, and kind. Keep your responses concise.
+# """
     
     # Updated query function for conversational models
     #
@@ -108,45 +108,45 @@ def query_hf_conversational(history):
 
 
 
-    # Initialize chat history
-    # if "chat_history" not in st.session_state:
-    #     st.session_state["chat_history"] = []
+    Initialize chat history
+    if "chat_history" not in st.session_state:
+        st.session_state["chat_history"] = []
 
-    # user_input = st.chat_input("How are you feeling today?")
+    user_input = st.chat_input("How are you feeling today?")
 
-    # if user_input:
-    #     user_text = user_input.strip()
-    #     st.session_state.chat_history.append({"role": "user", "text": user_text})
+    if user_input:
+        user_text = user_input.strip()
+        st.session_state.chat_history.append({"role": "user", "text": user_text})
 
-    #     # Safety-first rule-based check
-    #     lowered = user_text.lower()
-    #     crisis_terms = ["suicide", "kill myself", "end my life", "want to die", "hurt myself"]
-    #     if any(term in lowered for term in crisis_terms):
-    #         bot_reply = (
-    #             "⚠ It sounds like you are in significant distress. Your safety is the most important thing. "
-    #             "Please reach out for immediate help. You are not alone.\n\n"
-    #             "📞 *National Suicide Prevention Lifeline (India):* 9152987821\n"
-    #             "📞 *KIRAN Mental Health Helpline:* 1800-599-0019\n\n"
-    #             "If you are in immediate danger, please call your local emergency services."
-    #         )
-    #     else:
-    #         history_for_api = [{"role": "user", "text": SYSTEM_PROMPT}] + st.session_state.chat_history
+        # Safety-first rule-based check
+        lowered = user_text.lower()
+        crisis_terms = ["suicide", "kill myself", "end my life", "want to die", "hurt myself"]
+        if any(term in lowered for term in crisis_terms):
+            bot_reply = (
+                "⚠ It sounds like you are in significant distress. Your safety is the most important thing. "
+                "Please reach out for immediate help. You are not alone.\n\n"
+                "📞 *National Suicide Prevention Lifeline (India):* 9152987821\n"
+                "📞 *KIRAN Mental Health Helpline:* 1800-599-0019\n\n"
+                "If you are in immediate danger, please call your local emergency services."
+            )
+        else:
+            history_for_api = [{"role": "user", "text": SYSTEM_PROMPT}] + st.session_state.chat_history
             
-    #         with st.spinner("Aura is thinking..."):
+            with st.spinner("Aura is thinking..."):
 
-    #             bot_reply_text = query_hf_conversational(history_for_api)
+                bot_reply_text = query_hf_conversational(history_for_api)
 
-    #         if bot_reply_text:
-    #             bot_reply = bot_reply_text
-    #         else:
-    #             bot_reply = "I'm sorry, I'm having a little trouble connecting right now. Please know that I'm here to listen."
+            if bot_reply_text:
+                bot_reply = bot_reply_text
+            else:
+                bot_reply = "I'm sorry, I'm having a little trouble connecting right now. Please know that I'm here to listen."
 
-    #     st.session_state.chat_history.append({"role": "bot", "text": bot_reply})
+        st.session_state.chat_history.append({"role": "bot", "text": bot_reply})
 
-    # # Display chat history
-    # for msg in st.session_state.chat_history:
-    #     with st.chat_message("user" if msg["role"] == "user" else "assistant", avatar="👤" if msg["role"] == "user" else "🤖"):
-    #         st.markdown(msg["text"])
+    # Display chat history
+    for msg in st.session_state.chat_history:
+        with st.chat_message("user" if msg["role"] == "user" else "assistant", avatar="👤" if msg["role"] == "user" else "🤖"):
+            st.markdown(msg["text"])
 
 # ------------------------------
 # 2. BOOKING SYSTEM
@@ -249,6 +249,7 @@ elif choice == "Admin Dashboard":
     st.altair_chart(chart, use_container_width=True)
 
     st.metric("Total Resource Views", plays)
+
 
 
 
