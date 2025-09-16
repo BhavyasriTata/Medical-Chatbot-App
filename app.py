@@ -370,11 +370,9 @@ def page_resources():
         elif r["type"].lower() == "text":
             st.download_button(
                 "📥 Download Text Resource",
-                data=r["description"],  # using description as sample text
+                data=r["description"],  # using description as text file
                 file_name=f"{r['title'].replace(' ', '_')}.txt",
             )
-        elif r["url"]:
-            st.markdown(f"[🌐 Open resource]({r['url']})", unsafe_allow_html=True)
 
         # --- Tracking "Mark as Viewed/Played" ---
         if "plays" not in st.session_state:
@@ -384,6 +382,7 @@ def page_resources():
             st.success(f"Thank you for using {r['title']} 🙏")
 
         st.markdown("---")  # separator between resources
+
 
 
 # def page_resources():
@@ -543,6 +542,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
