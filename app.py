@@ -915,8 +915,8 @@ def main():
         for i, feature in enumerate(features):
             with cols[i % 3]:
                 # Card as clickable button with color
-                # if st.button(feature, key=feature, use_container_width=True):
-                #     st.session_state.current_page = feature
+                if st.button(feature, key=feature, use_container_width=True):
+                    st.session_state.current_page = feature
 
                 # Display the styled card visually
                 st.markdown(
@@ -951,6 +951,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
