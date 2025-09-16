@@ -51,8 +51,33 @@ Your core principles are:
     #
 # REPLACE the old query_hf_conversational function with this one
 #
+if choice == "AI Chatbot":
+    st.title("🤖 AI-Guided First Aid Chatbot")
+    st.write(
+        "A confidential space to explore your feelings. Please note this is "
+        "*not a substitute for professional therapy*."
+    )
+
+    API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
+
+    SYSTEM_PROMPT = """You are 'Aura', a caring and empathetic AI mental health companion..."""
+
+    # Initialize chat history
+    if "chat_history" not in st.session_state:
+        st.session_state["chat_history"] = []
+
+    user_input = st.chat_input("How are you feeling today?")
+
+    if user_input:
+        ...
+    # Display chat history
+    for msg in st.session_state.chat_history:
+        ...
+        
+# ------------------------------
+# Place the function OUTSIDE the if-block
+# ------------------------------
 def query_hf_conversational(history):
-    # (The top part of the function stays the same)
     prompt_messages = []
     for msg in history:
         role = "user" if msg["role"] == "user" else "assistant"
@@ -67,32 +92,17 @@ def query_hf_conversational(history):
 
     payload = {
         "inputs": formatted_prompt,
-        "parameters": {
-            "max_new_tokens": 250,
-            "temperature": 0.7,
-            "return_full_text": False,
-        }
+        "parameters": {"max_new_tokens": 250, "temperature": 0.7, "return_full_text": False}
     }
-    
-    # --- THIS IS THE IMPROVED PART ---
+
     try:
         resp = requests.post(API_URL, headers=headers, json=payload, timeout=45)
-        # This line will raise an error for bad responses (4xx or 5xx)
-        resp.raise_for_status() 
+        resp.raise_for_status()
         return resp.json()[0]['generated_text']
-        
-    except requests.exceptions.HTTPError as err:
-        # This will catch specific HTTP errors from the server
-        st.error(f"API Error: {err.response.status_code} - {err.response.text}")
-        if err.response.status_code == 401:
-             st.error("This is an 'Unauthorized' error. Please double-check that your Hugging Face API key is correct.")
-        elif "is currently loading" in err.response.text:
-             st.error("The model is still loading on the server. Please try again in a few minutes.")
-        return None
     except Exception as e:
-        # This will catch other errors like timeouts or connection problems
-        st.error(f"An unexpected error occurred: {e}")
+        st.error(f"API error: {e}")
         return None
+
     #
 
 
@@ -239,6 +249,7 @@ elif choice == "Admin Dashboard":
     st.altair_chart(chart, use_container_width=True)
 
     st.metric("Total Resource Views", plays)
+
 
 
 
