@@ -1,3 +1,4 @@
+# app.py
 import os
 import streamlit as st
 import datetime
@@ -11,11 +12,23 @@ import pandas as pd
 
 st.set_page_config(page_title="Digital Mental Health Support", layout="wide")
 
-# IMPORTANT: Replace with your actual Hugging Face API Key
-# You can get one here: https://huggingface.co/settings/tokens
-HF_API_KEY = "Your_HuggingFace_API_Key_Here" 
+# Hard-coded API key
+HF_API_KEY = "Secret"
 
+# Use a QA model, not the token URL
+API_URL = "https://api-inference.huggingface.co/models/deepset/roberta-base-squad2"
 headers = {"Authorization": f"Bearer {HF_API_KEY}"}
+
+def query_hf(question, context):
+    payload = {"inputs": {"question": question, "context": context}}
+    try:
+        resp = requests.post(API_URL, headers=headers, json=payload, timeout=30)
+        resp.raise_for_status()
+        return resp.json()
+    except Exception:
+        return None
+
+
 
 # ------------------------------
 # APP SECTIONS
@@ -24,13 +37,13 @@ menu = ["AI Chatbot", "Book a Session", "Resources", "Peer Support Forum", "Admi
 choice = st.sidebar.radio("Navigate", menu)
 
 # ------------------------------
-# 1. AI CHATBOT (UPGRADED)
+# 1. AI CHATBOT
 # ------------------------------
 if choice == "AI Chatbot":
     st.title("🤖 AI-Guided First Aid Chatbot")
     st.write(
         "A confidential space to explore your feelings. Please note this is "
-        "*not a substitute for professional therapy*."
+        "not a substitute for professional therapy."
     )
 
     # Use a better, conversational model
@@ -40,11 +53,11 @@ if choice == "AI Chatbot":
     SYSTEM_PROMPT = """You are 'Aura', a caring and empathetic AI mental health companion. Your purpose is to provide a safe, non-judgmental space for users to express their feelings.
 
 Your core principles are:
-1.  *Empathy and Validation:* Always validate the user's feelings. Use phrases like "That sounds incredibly difficult," "It makes sense that you would feel that way," or "Thank you for sharing that with me."
-2.  *Active Listening:* Ask thoughtful, open-ended questions to encourage the user to explore their feelings. For example, "How has that been affecting you?" or "What's on your mind when you feel that way?"
-3.  *Gentle Guidance:* You can suggest simple, evidence-based coping strategies (like deep breathing, grounding, or journaling) but NEVER present them as a cure. Introduce them gently.
-4.  *Safety First:* You are NOT a therapist. Do not give medical advice.
-5.  *Maintain Persona:* Always be calm, supportive, and kind. Keep your responses concise.
+1.  Empathy and Validation: Always validate the user's feelings. Use phrases like "That sounds incredibly difficult," "It makes sense that you would feel that way," or "Thank you for sharing that with me."
+2.  Active Listening: Ask thoughtful, open-ended questions to encourage the user to explore their feelings. For example, "How has that been affecting you?" or "What's on your mind when you feel that way?"
+3.  Gentle Guidance: You can suggest simple, evidence-based coping strategies (like deep breathing, grounding, or journaling) but NEVER present them as a cure. Introduce them gently.
+4.  Safety First: You are NOT a therapist. Do not give medical advice.
+5.  Maintain Persona: Always be calm, supportive, and kind. Keep your responses concise.
 """
     
     # Updated query function for conversational models
@@ -95,8 +108,8 @@ Your core principles are:
             bot_reply = (
                 "⚠ It sounds like you are in significant distress. Your safety is the most important thing. "
                 "Please reach out for immediate help. You are not alone.\n\n"
-                "📞 *National Suicide Prevention Lifeline (India):* 9152987821\n"
-                "📞 *KIRAN Mental Health Helpline:* 1800-599-0019\n\n"
+                "📞 National Suicide Prevention Lifeline (India): 9152987821\n"
+                "📞 KIRAN Mental Health Helpline: 1800-599-0019\n\n"
                 "If you are in immediate danger, please call your local emergency services."
             )
         else:
@@ -117,6 +130,8 @@ Your core principles are:
         with st.chat_message("user" if msg["role"] == "user" else "assistant", avatar="👤" if msg["role"] == "user" else "🤖"):
             st.markdown(msg["text"])
 
+
+
 # ------------------------------
 # 2. BOOKING SYSTEM
 # ------------------------------
@@ -127,6 +142,7 @@ elif choice == "Book a Session":
     date = st.date_input("Choose a Date", min_value=datetime.date.today())
     time_selected = st.time_input("Choose a Time", datetime.time(15, 0))
     if st.button("Book Appointment"):
+        # For MVP we simply show confirmation; persist to DB or file in real app
         st.success(f"✅ Appointment booked for {name or 'Anonymous'} on {date} at {time_selected}")
 
 # ------------------------------
@@ -143,8 +159,35 @@ elif choice == "Resources":
         st.audio("https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3")
     elif resource_type == "Texts":
         st.download_button(
-            "📥 Download Wellness Guide (TXT)",
-            data="Self-care means taking the time to do things that help you live well and improve both your physical health and mental health. This can help you manage stress, lower your risk of illness, and increase your energy. Even small acts of self-care in your daily life can have a big impact.",
+            "📥 Download Wellness Guide (PDF)",
+            data=""" Self-care means taking the time to do things that help you live well and improve both your physical health and mental health. This can help you manage stress, lower your risk of illness, and increase your energy. Even small acts of self-care in your daily life can have a big impact.
+
+Here are some self-care tips:
+
+⦁	Get regular exercise. Just 30 minutes of walking every day can boost your mood and improve your health.
+⦁	Small amounts of exercise add up, so do not be discouraged if you can not do 30 minutes at one time.
+⦁	Eat healthy, regular meals and stay hydrated.
+⦁	A balanced diet and plenty of water can improve your energy and focus throughout the day.
+⦁	Pay attention to your intake of caffeine and alcohol and how they affect your mood and well-being—for some, decreasing caffeine and alcohol consumption can be helpful.
+⦁	Make sleep a priority.
+⦁	Stick to a schedule, and make sure you are getting enough sleep.
+⦁	Blue light from devices and screens can make it harder to fall asleep, so reduce blue light exposure from your phone or computer before bedtime.
+⦁	Try a relaxing activity.
+⦁	Explore relaxation or wellness programs or apps, which may incorporate meditation, muscle relaxation, or breathing exercises.
+⦁	Schedule regular times for these and other healthy activities you enjoy, such as listening to music, reading, spending time in nature, and engaging in low-stress hobbies.
+⦁	Set goals and priorities.
+⦁	Decide what must get done now and what can wait. Learn to say NO to new tasks if you start to feel like you are taking on too much.
+⦁	Try to appreciate what you have accomplished at the end of the day.
+⦁	Practice gratitude.
+⦁	Remind yourself daily of things you are grateful for.
+⦁	Be specific.
+⦁	Write them down or replay them in your mind.
+⦁	Focus on positivity.
+⦁	Identify and challenge your negative and unhelpful thoughts.
+⦁	Stay connected.
+⦁	Reach out to friends or family members who can provide emotional support and practical help.
+⦁	Self-care looks different for everyone, and it is important to find what you need and enjoy.
+⦁	It may take trial and error to discover what works best for you. """,
             file_name="wellness_guide.txt",
         )
 
@@ -170,8 +213,9 @@ elif choice == "Peer Support Forum":
     user_msg = st.text_input(f"Message to {selected_profile}", key=f"peer_input_{selected_profile}")
     if st.button("Send Message", key=f"peer_send_{selected_profile}") and user_msg.strip():
         st.session_state["peer_chat"][selected_profile].append(("You", user_msg.strip()))
+        # Simulated volunteer reply (in real app volunteers log in and reply)
         st.session_state["peer_chat"][selected_profile].append(
-            (selected_profile, "Thank you for sharing. I'm here to listen.")
+            (selected_profile, "Thank you for sharing. I'm here to listen — would you like some self-help resources?")
         )
 
     for sender, msg in st.session_state["peer_chat"][selected_profile]:
@@ -185,9 +229,9 @@ elif choice == "Admin Dashboard":
     st.write("No personal student data shown. Only trends are visible.")
 
     plays = st.session_state.get("plays", 0)
-    data = pd.DataFrame({"Resource Type": ["Videos/Audio/Text"], "Views": [plays]})
+    data = pd.DataFrame({"Resources": ["Videos/Audio/Text"], "Plays": [plays]})
 
-    chart = alt.Chart(data).mark_bar().encode(x="Resource Type", y="Views", tooltip=["Resource Type", "Views"])
+    chart = alt.Chart(data).mark_bar().encode(x="Resources", y="Plays", tooltip=["Resources", "Plays"])
     st.altair_chart(chart, use_container_width=True)
 
-    st.metric("Total Resource Views", plays)
+    st.metric("Total Resources Played", plays)
