@@ -353,7 +353,13 @@ def page_resources():
     elif resource_type == "Texts":
         st.subheader("📖 Wellness Guide")
         st.write(
-            """Self-care means taking the time to do things that help you live well and improve both your physical health and mental health. This can help you manage stress, lower your risk of illness, and increase your energy. Even small acts of self-care in your daily life can have a big impact.
+           "Self-care means taking the time to do things that help you live well and improve both your physical health and mental health. "
+                 "This can help you manage stress, lower your risk of illness, and increase your energy. "
+                 "Even small acts of self-care in your daily life can have a big impact."
+        )
+        st.download_button(
+            "📥 Download Wellness Guide (TXT)",
+            data= """ Self-care means taking the time to do things that help you live well and improve both your physical health and mental health. This can help you manage stress, lower your risk of illness, and increase your energy. Even small acts of self-care in your daily life can have a big impact.
 
 Here are some self-care tips:
 
@@ -383,13 +389,7 @@ Here are some self-care tips:
 ⦁	It may take trial and error to discover what works best for you.
 
 
-"""
-        )
-        st.download_button(
-            "📥 Download Wellness Guide (TXT)",
-            data="Self-care means taking the time to do things that help you live well and improve both your physical health and mental health. "
-                 "This can help you manage stress, lower your risk of illness, and increase your energy. "
-                 "Even small acts of self-care in your daily life can have a big impact.",
+""",
             file_name="wellness_guide.txt",
         )
 
@@ -558,6 +558,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
