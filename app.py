@@ -1,166 +1,365 @@
 # app.py
-import os
 import streamlit as st
-import datetime
-import requests
-import altair as alt
+import sqlite3
 import pandas as pd
+import altair as alt
+import os
+import datetime
+import json
+import random
+import hashlib
+from pathlib import Path
 
-# ------------------------------
-# CONFIG
-# ------------------------------
+# Optional OpenAI usage (only if OPENAI_API_KEY set)
+USE_OPENAI = bool(os.getenv("OPENAI_API_KEY"))
+if USE_OPENAI:
+    import openai
 
-st.set_page_config(page_title="Digital Mental Health Support", layout="wide")
+# ---------- CONFIG ----------
+DB_PATH = "mental_platform.db"
+FERNET_KEY = os.getenv("FERNET_KEY")  # optional — base64 key from Fernet.generate_key()
+MOD_PASSWORD = os.getenv("MOD_PASSWORD", "modpass123")  # Change in deployment
+EMERGENCY_HELPLINE = "If you are in immediate danger or crisis, call your local emergency number or the college emergency helpline."
 
-# Hard-coded API key
-HF_API_KEY = "Secret"
+# Screening thresholds (PHQ-9)
+PHQ9_THRESHOLDS = {
+    "none_mild": range(0, 10),
+    "moderate": range(10, 15),
+    "moderately_severe": range(15, 20),
+    "severe": range(20, 100)
+}
+# GAD-7 thresholds
+GAD7_THRESHOLDS = {
+    "none_mild": range(0, 10),
+    "moderate": range(10, 15),
+    "severe": range(15, 100)
+}
 
-# Use a QA model, not the token URL
-API_URL = "https://api-inference.huggingface.co/models/deepset/roberta-base-squad2"
-headers = {"Authorization": f"Bearer {HF_API_KEY}"}
+# ---------- UTILS ----------
+def get_conn():
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    return conn
 
-def query_hf(question, context):
-    payload = {"inputs": {"question": question, "context": context}}
+def init_db():
+    conn = get_conn()
+    c = conn.cursor()
+    # Students table (anonymized)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS screenings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        anon_id TEXT,
+        phq9_score INTEGER,
+        gad7_score INTEGER,
+        meta JSON,
+        timestamp TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS bookings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        anon_id TEXT,
+        preferred_date TEXT,
+        preferred_time TEXT,
+        notes TEXT,
+        contact_encrypted TEXT,
+        status TEXT,
+        timestamp TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS resources (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT,
+        type TEXT,
+        language TEXT,
+        url TEXT,
+        description TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS posts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        anon_id TEXT,
+        content TEXT,
+        flagged INTEGER DEFAULT 0,
+        approved INTEGER DEFAULT 0,
+        timestamp TEXT
+    )
+    """)
+    conn.commit()
+    conn.close()
+
+def seed_sample_resources():
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("SELECT count(*) FROM resources")
+    if c.fetchone()[0] == 0:
+        sample = [
+            ("Understanding Anxiety (Guide)", "article", "English", "https://example.edu/anxiety.html", "A simple guide to anxiety and coping."),
+            ("PHQ-9 Explained (Video)", "video", "Hindi", "https://example.edu/phq9_hi.mp4", "Short video on PHQ-9 meaning (regional language)"),
+            ("Relaxation Audio (10 min)", "audio", "Tamil", "https://example.edu/relax_ta.mp3", "A 10-minute guided relaxation"),
+            ("On-campus Counsellors", "article", "English", "", "List of counsellors and timings")
+        ]
+        c.executemany("INSERT INTO resources (title, type, language, url, description) VALUES (?, ?, ?, ?, ?)", sample)
+        conn.commit()
+    conn.close()
+
+def anonymize_id(raw_id: str):
+    # deterministic pseudonymization (not reversible)
+    h = hashlib.sha256(raw_id.encode()).hexdigest()[:8]
+    return f"anon_{h}"
+
+def encrypt_contact(plain: str):
+    if not FERNET_KEY:
+        return None
     try:
-        resp = requests.post(API_URL, headers=headers, json=payload, timeout=30)
-        resp.raise_for_status()
-        return resp.json()
+        f = Fernet(FERNET_KEY.encode())
+        return f.encrypt(plain.encode()).decode()
     except Exception:
         return None
 
+def decrypt_contact(token: str):
+    if not FERNET_KEY:
+        return None
+    try:
+        f = Fernet(FERNET_KEY.encode())
+        return f.decrypt(token.encode()).decode()
+    except InvalidToken:
+        return None
+    except Exception:
+        return None
 
+def score_phq9(answers):
+    return sum(int(x) for x in answers)
 
-# ------------------------------
-# APP SECTIONS
-# ------------------------------
-menu = ["AI Chatbot", "Book a Session", "Resources", "Peer Support Forum", "Admin Dashboard"]
-choice = st.sidebar.radio("Navigate", menu)
+def score_gad7(answers):
+    return sum(int(x) for x in answers)
 
-# ------------------------------
-# 1. AI CHATBOT
-# ------------------------------
-if choice == "AI Chatbot":
-    st.title("🤖 AI-Guided First Aid Chatbot")
-    st.write(
-        "A confidential space to explore your feelings. Please note this is "
-        "not a substitute for professional therapy."
-    )
+def risk_level_from_scores(phq9, gad7):
+    # Simple mapping
+    phq9_level = "none/mild"
+    for k, r in PHQ9_THRESHOLDS.items():
+        if phq9 in r:
+            phq9_level = k
+            break
+    gad7_level = "none/mild"
+    for k, r in GAD7_THRESHOLDS.items():
+        if gad7 in r:
+            gad7_level = k
+            break
+    return phq9_level, gad7_level
 
-    # Use a better, conversational model
-    API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
+def make_anon_tag():
+    return "anon_" + "".join(random.choice("0123456789ABCDEF") for i in range(6))
 
-    # Define the chatbot's persona and instructions
-    SYSTEM_PROMPT = """You are 'Aura', a caring and empathetic AI mental health companion. Your purpose is to provide a safe, non-judgmental space for users to express their feelings.
-
-Your core principles are:
-1.  Empathy and Validation: Always validate the user's feelings. Use phrases like "That sounds incredibly difficult," "It makes sense that you would feel that way," or "Thank you for sharing that with me."
-2.  Active Listening: Ask thoughtful, open-ended questions to encourage the user to explore their feelings. For example, "How has that been affecting you?" or "What's on your mind when you feel that way?"
-3.  Gentle Guidance: You can suggest simple, evidence-based coping strategies (like deep breathing, grounding, or journaling) but NEVER present them as a cure. Introduce them gently.
-4.  Safety First: You are NOT a therapist. Do not give medical advice.
-5.  Maintain Persona: Always be calm, supportive, and kind. Keep your responses concise.
-"""
-    
-    # Updated query function for conversational models
-    def query_hf_conversational(history):
-        prompt_messages = []
-        for msg in history:
-            role = "user" if msg["role"] == "user" else "assistant"
-            prompt_messages.append({"role": role, "content": msg["text"]})
-        
-        # Manually format the prompt string for the Mistral model
-        formatted_prompt = ""
-        for message in prompt_messages:
-            if message["role"] == "user":
-                formatted_prompt += f"[INST] {message['content']} [/INST]"
-            else:
-                formatted_prompt += f"{message['content']} "
-
-        payload = {
-            "inputs": formatted_prompt,
-            "parameters": {
-                "max_new_tokens": 250,
-                "temperature": 0.7,
-                "return_full_text": False,
-            }
+# ---------- AI Chat helpers ----------
+def rule_based_response(user_text, last_screening=None):
+    """
+    Simple rule-based replies for fallback AI.
+    Escalation if suicidal keywords or high screening risk.
+    """
+    text = user_text.lower()
+    suicidal_keywords = ["suicide", "kill myself", "i want to die", "ending", "hurt myself"]
+    urgent = any(k in text for k in suicidal_keywords)
+    if urgent:
+        return {
+            "message": (
+                "I’m really sorry you’re feeling this way. If you are in immediate danger, please call your local emergency services now. "
+                + EMERGENCY_HELPLINE
+            ),
+            "escalate": True
         }
-        try:
-            resp = requests.post(API_URL, headers=headers, json=payload, timeout=45)
-            resp.raise_for_status()
-            return resp.json()[0]['generated_text']
-        except Exception as e:
-            st.error(f"Error communicating with the model: {e}")
-            return None
+    if last_screening:
+        phq9, gad7 = last_screening
+        if phq9 >= 15 or gad7 >= 15:
+            return {
+                "message": "I see your screening scores indicate moderate-to-severe symptoms. I recommend booking with a counsellor. Would you like to book an appointment now? You can also reach immediate support via the helpline.",
+                "escalate": False
+            }
+    # generic coping tips
+    tips = [
+        "Take slow deep breaths for a minute — breathe in for 4, hold 2, out for 6.",
+        "Try grounding: name 5 things you can see, 4 you can touch, 3 you can hear.",
+        "A short walk, even 5–10 minutes, can reduce stress.",
+        "If you're comfortable, talking to a trusted friend or a counsellor often helps."
+    ]
+    return {"message": random.choice(tips), "escalate": False}
 
-    # Initialize chat history
-    if "chat_history" not in st.session_state:
-        st.session_state["chat_history"] = []
+def call_openai_chat(prompt):
+    """
+    Example OpenAI call. Only used if OPENAI_API_KEY is set.
+    IMPORTANT: This function is a minimal example. For production, handle rate limits and errors robustly.
+    """
+    openai.api_key = os.getenv("OPENAI_API_KEY")
+    resp = openai.ChatCompletion.create(
+        model="gpt-4o-mini",  # replace with available model in your account
+        messages=[{"role":"system","content":"You are a supportive mental health first-aid assistant. Provide coping tips and encourage professional help when needed. Don't provide medical or legal advice."},
+                  {"role":"user","content":prompt}],
+        temperature=0.7,
+        max_tokens=400
+    )
+    return resp.choices[0].message.content.strip()
 
-    user_input = st.chat_input("How are you feeling today?")
+# ---------- UI PAGES ----------
 
-    if user_input:
-        user_text = user_input.strip()
-        st.session_state.chat_history.append({"role": "user", "text": user_text})
 
-        # Safety-first rule-based check
-        lowered = user_text.lower()
-        crisis_terms = ["suicide", "kill myself", "end my life", "want to die", "hurt myself"]
-        if any(term in lowered for term in crisis_terms):
-            bot_reply = (
-                "⚠ It sounds like you are in significant distress. Your safety is the most important thing. "
-                "Please reach out for immediate help. You are not alone.\n\n"
-                "📞 National Suicide Prevention Lifeline (India): 9152987821\n"
-                "📞 KIRAN Mental Health Helpline: 1800-599-0019\n\n"
-                "If you are in immediate danger, please call your local emergency services."
-            )
-        else:
-            history_for_api = [{"role": "user", "text": SYSTEM_PROMPT}] + st.session_state.chat_history
-            
-            with st.spinner("Aura is thinking..."):
-                bot_reply_text = query_hf_conversational(history_for_api)
+def page_home():
+    st.title("Digital Psychological Intervention System — College Pilot")
+    st.markdown("""
+    This platform provides:
+    - *AI-guided first-aid chat* (optional OpenAI or rule-based fallback),
+    - *Screening (PHQ-9 / GAD-7)*,
+    - *Confidential appointment booking*,
+    - *Psychoeducational resource hub (regional languages)*,
+    - *Peer support forum*,
+    - *Admin dashboard* (anonymous analytics).
+    """)
+    st.info("This is a prototype. For emergencies see the helpline at the top-right or contact local emergency services.")
+    st.sidebar.markdown("## Quick actions\n- Take screening\n- Chat with First Aid\n- Book Counsellor")
 
-            if bot_reply_text:
-                bot_reply = bot_reply_text
+def page_screening():
+    st.header("1) Screening — PHQ-9 (depression) and GAD-7 (anxiety)")
+    with st.form("screen_form"):
+        st.write("Optional: enter a personal identifier (we will anonymize/encrypt it). Leave blank for anonymous.")
+        raw_id = st.text_input("Student ID / Roll no / Email (optional)")
+        st.markdown("### PHQ-9 questions (0=Not at all ... 3=Nearly every day)")
+        phq9_q = [
+            "Little interest or pleasure in doing things",
+            "Feeling down, depressed, or hopeless",
+            "Trouble falling or staying asleep",
+            "Feeling tired or little energy",
+            "Poor appetite or overeating",
+            "Feeling bad about yourself",
+            "Trouble concentrating",
+            "Moving or speaking slowly / restless",
+            "Thoughts of being better off dead or hurting yourself"
+        ]
+        phq9_answers = [st.selectbox(f"PHQ-9 Q{i+1}: {q}", ["0","1","2","3"], key=f"p{i}") for i,q in enumerate(phq9_q)]
+
+        st.markdown("### GAD-7 questions (0=Not at all ... 3=Nearly every day)")
+        gad7_q = [
+            "Feeling nervous, anxious or on edge",
+            "Not being able to stop worrying",
+            "Worrying too much about different things",
+            "Trouble relaxing",
+            "Being restless",
+            "Becoming easily annoyed",
+            "Feeling afraid as if something awful might happen"
+        ]
+        gad7_answers = [st.selectbox(f"GAD-7 Q{i+1}: {q}", ["0","1","2","3"], key=f"g{i}") for i,q in enumerate(gad7_q)]
+
+        submitted = st.form_submit_button("Submit screening")
+        if submitted:
+            anon = anonymize_id(raw_id) if raw_id else make_anon_tag()
+            phq9_score = score_phq9(phq9_answers)
+            gad7_score = score_gad7(gad7_answers)
+            level = risk_level_from_scores(phq9_score, gad7_score)
+            conn = get_conn()
+            c = conn.cursor()
+            meta = {"phq9_answers": phq9_answers, "gad7_answers": gad7_answers}
+            c.execute("INSERT INTO screenings (anon_id, phq9_score, gad7_score, meta, timestamp) VALUES (?, ?, ?, ?, ?)",
+                      (anon, phq9_score, gad7_score, json.dumps(meta), datetime.datetime.utcnow().isoformat()))
+            conn.commit()
+            conn.close()
+            st.success(f"Screening saved (anon id: {anon}). PHQ-9: {phq9_score}  |  GAD-7: {gad7_score}")
+            phq9_level, gad7_level = level
+            st.info(f"PHQ-9 level: *{phq9_level}, GAD-7 level: **{gad7_level}*")
+            # brief actionable suggestions
+            if phq9_score >= 15 or gad7_score >= 15 or int(phq9_answers[-1])>0:
+                st.warning("Your responses suggest moderate-to-severe symptoms or suicidal thoughts — we recommend contacting a professional immediately.")
+                st.write(EMERGENCY_HELPLINE)
+                if st.button("Book counsellor now"):
+                    st.session_state.get("book_now", True)
             else:
-                bot_reply = "I'm sorry, I'm having a little trouble connecting right now. Please know that I'm here to listen."
+                st.write("Here are some immediate coping suggestions:")
+                st.write("- Try breathing exercises, grounding, or a short walk.")
+                st.write("- If you'd like, talk to a counsellor. You can book an appointment below.")
 
-        st.session_state.chat_history.append({"role": "bot", "text": bot_reply})
+def page_first_aid_chat():
+    st.header("2) AI-guided First-Aid Chat (Supportive, not a replacement for professional care)")
+    st.markdown("*Privacy note:* Chat logs are only stored temporarily in your browser session and not saved to the DB by default for privacy.")
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
+    # Optionally fetch recent screening to guide escalation
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("SELECT phq9_score, gad7_score FROM screenings ORDER BY id DESC LIMIT 1")
+    row = c.fetchone()
+    last_screening = (row[0], row[1]) if row else None
 
-    # Display chat history
-    for msg in st.session_state.chat_history:
-        with st.chat_message("user" if msg["role"] == "user" else "assistant", avatar="👤" if msg["role"] == "user" else "🤖"):
-            st.markdown(msg["text"])
+    user_input = st.text_input("How can I help today? (type feelings, problems or 'help')", key="chat_input")
+    if st.button("Send"):
+        st.session_state.chat_history.append(("user", user_input))
+        if USE_OPENAI:
+            try:
+                prompt = f"User says: {user_input}\nProvide supportive, non-judgmental, practical coping tips. If suicidal or high-risk, instruct the user to seek emergency help and encourage booking. Keep brief."
+                ai_resp = call_openai_chat(prompt)
+                st.session_state.chat_history.append(("bot", ai_resp))
+            except Exception as e:
+                st.error("AI service error — falling back to rule-based response.")
+                rb = rule_based_response(user_input, last_screening)
+                st.session_state.chat_history.append(("bot", rb["message"]))
+                if rb.get("escalate"):
+                    st.warning(EMERGENCY_HELPLINE)
+        else:
+            rb = rule_based_response(user_input, last_screening)
+            st.session_state.chat_history.append(("bot", rb["message"]))
+            if rb.get("escalate"):
+                st.warning(EMERGENCY_HELPLINE)
 
+    # show chat
+    for role, msg in st.session_state.chat_history[::-1]:
+        if role == "bot":
+            st.markdown(f"*Support Bot:* {msg}")
+        else:
+            st.markdown(f"*You:* {msg}")
 
+def page_booking():
+    st.header("3) Confidential Booking System")
+    st.markdown("Book an appointment with an on-campus counsellor. Contact info is optional.")
+    with st.form("booking_form"):
+        raw_id = st.text_input("Student ID / Email (optional to help counsellor; will be anonymized/encrypted)")
+        preferred_date = st.date_input("Preferred date", min_value=datetime.date.today())
+        preferred_time = st.time_input("Preferred time", value=datetime.time(hour=10, minute=0))
+        contact = st.text_input("Contact (phone/email) — optional")
+        notes = st.text_area("Notes (brief) — optional")
+        submitted = st.form_submit_button("Request Booking")
+        if submitted:
+            anon = anonymize_id(raw_id) if raw_id else make_anon_tag()
+            contact_enc = encrypt_contact(contact) if contact else None
+            conn = get_conn()
+            c = conn.cursor()
+            c.execute("INSERT INTO bookings (anon_id, preferred_date, preferred_time, notes, contact_encrypted, status, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                      (anon, preferred_date.isoformat(), preferred_time.strftime("%H:%M"), notes, contact_enc, "requested", datetime.datetime.utcnow().isoformat()))
+            conn.commit()
+            conn.close()
+            st.success("Booking request saved. Counselors will follow up through provided contact (if given).")
 
-# ------------------------------
-# 2. BOOKING SYSTEM
-# ------------------------------
-elif choice == "Book a Session":
-    st.title("📅 Confidential Counselling Booking")
+def page_resources():
+    st.title("🎧 Mental Health Resources Hub")
 
-    name = st.text_input("Your Name (Optional — kept confidential)")
-    date = st.date_input("Choose a Date", min_value=datetime.date.today())
-    time_selected = st.time_input("Choose a Time", datetime.time(15, 0))
-    if st.button("Book Appointment"):
-        # For MVP we simply show confirmation; persist to DB or file in real app
-        st.success(f"✅ Appointment booked for {name or 'Anonymous'} on {date} at {time_selected}")
-
-# ------------------------------
-# 3. RESOURCES HUB
-# ------------------------------
-elif choice == "Resources":
-    st.title("🎧 Mental Health Resources")
-
+    # Let user choose type
     resource_type = st.radio("Choose Resource Type", ["Videos", "Audios", "Texts"])
 
+    # Display content based on type
     if resource_type == "Videos":
+        st.subheader("🧘 Guided Meditation Video")
         st.video("https://www.youtube.com/watch?v=1vx8iUvfyCY")  # Example meditation video
+
     elif resource_type == "Audios":
+        st.subheader("🎵 Relaxing Audio")
         st.audio("https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3")
+
     elif resource_type == "Texts":
+        st.subheader("📖 Wellness Guide")
+        st.write(
+           "Self-care means taking the time to do things that help you live well and improve both your physical health and mental health. "
+                 "This can help you manage stress, lower your risk of illness, and increase your energy. "
+                 "Even small acts of self-care in your daily life can have a big impact."
+        )
         st.download_button(
-            "📥 Download Wellness Guide (PDF)",
-            data=""" Self-care means taking the time to do things that help you live well and improve both your physical health and mental health. This can help you manage stress, lower your risk of illness, and increase your energy. Even small acts of self-care in your daily life can have a big impact.
+            "📥 Download Wellness Guide (TXT)",
+            data= """ Self-care means taking the time to do things that help you live well and improve both your physical health and mental health. This can help you manage stress, lower your risk of illness, and increase your energy. Even small acts of self-care in your daily life can have a big impact.
 
 Here are some self-care tips:
 
@@ -187,51 +386,175 @@ Here are some self-care tips:
 ⦁	Stay connected.
 ⦁	Reach out to friends or family members who can provide emotional support and practical help.
 ⦁	Self-care looks different for everyone, and it is important to find what you need and enjoy.
-⦁	It may take trial and error to discover what works best for you. """,
+⦁	It may take trial and error to discover what works best for you.
+
+
+""",
             file_name="wellness_guide.txt",
         )
 
+    # Track how many resources are viewed/played
     if "plays" not in st.session_state:
         st.session_state["plays"] = 0
-    if st.button("Mark as Viewed/Played"):
+
+    if st.button("✅ Mark as Viewed/Played"):
         st.session_state["plays"] += 1
-        st.success("Thank you for using this resource 🙏")
+        st.success(f"Thank you for using this resource 🙏 (Total used: {st.session_state['plays']})")
 
-# ------------------------------
-# 4. PEER SUPPORT FORUM
-# ------------------------------
-elif choice == "Peer Support Forum":
-    st.title("💬 Peer Support Forum")
-    st.write("Talk to trained student volunteers. 6 profiles are available.")
+# def page_resources():
+#     st.header("4) Psychoeducational Resource Hub")
+#     conn = get_conn()
+#     c = conn.cursor()
+#     c.execute("SELECT id, title, type, language, url, description FROM resources")
+#     rows = c.fetchall()
+#     df = pd.DataFrame(rows, columns=["id","title","type","language","url","description"])
+#     languages = ["All"] + sorted(df["language"].dropna().unique().tolist())
+#     lang = st.selectbox("Filter by language", languages)
+#     typ = st.selectbox("Filter by type", ["All","article","video","audio"])
+#     q = st.text_input("Search title/description")
+#     filt = df.copy()
+    
+#     if lang != "All":
+#         filt = filt[filt["language"]==lang]
+#     if typ != "All":
+#         filt = filt[filt["type"]==typ]
+#     if q:
+#         filt = filt[filt["title"].str.contains(q, case=False) | filt["description"].str.contains(q, case=False)]
+#     for _, r in filt.iterrows():
+#         st.subheader(r["title"])
+#         st.write(f"Type: {r['type']}  •  Language: {r['language']}")
+#         st.write(r["description"])
+#         if r["url"]:
+#             st.markdown(f"[Open resource]({r['url']})")
 
-    profiles = [f"Student Volunteer {i}" for i in range(1, 7)]
-    selected_profile = st.selectbox("Choose a volunteer to chat with:", profiles)
+def page_forum():
+    st.header("5) Peer Support Forum (Anonymous, Moderated)")
+    st.markdown("Post anonymously, get supportive replies from peers. Posts are moderated before being public.")
+    # new post form
+    with st.form("post_form"):
+        content = st.text_area("Write your post (be respectful; anonymous):", height=120)
+        submit = st.form_submit_button("Post")
+        if submit and content.strip():
+            anon = make_anon_tag()
+            conn = get_conn()
+            c = conn.cursor()
+            c.execute("INSERT INTO posts (anon_id, content, flagged, approved, timestamp) VALUES (?, ?, ?, ?, ?)",
+                      (anon, content.strip(), 0, 0, datetime.datetime.utcnow().isoformat()))
+            conn.commit()
+            conn.close()
+            st.success("Thanks — your post will be reviewed by moderators and published if appropriate.")
 
-    if "peer_chat" not in st.session_state:
-        st.session_state["peer_chat"] = {p: [] for p in profiles}
+    # show approved posts
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("SELECT anon_id, content, timestamp FROM posts WHERE approved=1 ORDER BY id DESC LIMIT 30")
+    for anon_id, content, ts in c.fetchall():
+        st.markdown(f"{anon_id}** • {ts[:19]}")
+        st.write(content)
+    st.markdown("---")
+    st.markdown("Flag an existing public post by its anon_id (for moderator review):")
+    flag_id = st.text_input("Anon id to flag (e.g., anon_AB12CD)")
+    if st.button("Flag post"):
+        conn = get_conn()
+        c = conn.cursor()
+        c.execute("UPDATE posts SET flagged=1 WHERE anon_id=? AND approved=1", (flag_id,))
+        conn.commit()
+        st.success("Marked for moderation.")
 
-    user_msg = st.text_input(f"Message to {selected_profile}", key=f"peer_input_{selected_profile}")
-    if st.button("Send Message", key=f"peer_send_{selected_profile}") and user_msg.strip():
-        st.session_state["peer_chat"][selected_profile].append(("You", user_msg.strip()))
-        # Simulated volunteer reply (in real app volunteers log in and reply)
-        st.session_state["peer_chat"][selected_profile].append(
-            (selected_profile, "Thank you for sharing. I'm here to listen — would you like some self-help resources?")
+    st.markdown("*Moderator login* — click below to moderate (password-protected)")
+    if st.button("Moderator panel"):
+        pw = st.text_input("Moderator password", type="password")
+        if pw == MOD_PASSWORD:
+            st.session_state["moderator"] = True
+            st.success("Moderator logged in")
+        else:
+            st.error("Wrong password.")
+
+    if st.session_state.get("moderator"):
+        st.subheader("Moderation queue (new/unapproved posts)")
+        conn = get_conn()
+        c = conn.cursor()
+        c.execute("SELECT id, anon_id, content, flagged, timestamp FROM posts WHERE approved=0 ORDER BY id DESC")
+        rows = c.fetchall()
+        for id_, anon_id, content, flagged, ts in rows:
+            st.markdown(f"{anon_id}** • {ts[:19]}")
+            st.write(content)
+            cols = st.columns([1,1,1])
+            if cols[0].button(f"Approve {id_}", key=f"ap_{id_}"):
+                conn = get_conn(); c = conn.cursor(); c.execute("UPDATE posts SET approved=1 WHERE id=?", (id_,)); conn.commit(); st.experimental_rerun()
+            if cols[1].button(f"Delete {id_}", key=f"del_{id_}"):
+                conn = get_conn(); c = conn.cursor(); c.execute("DELETE FROM posts WHERE id=?", (id_,)); conn.commit(); st.experimental_rerun()
+            if cols[2].button(f"Flag {id_}", key=f"flag_{id_}"):
+                conn = get_conn(); c = conn.cursor(); c.execute("UPDATE posts SET flagged=1 WHERE id=?", (id_,)); conn.commit(); st.experimental_rerun()
+
+def page_admin():
+    st.header("6) Admin Dashboard — Anonymous analytics")
+    st.markdown("Aggregated analytics only. No personal data is shown in cleartext.")
+    conn = get_conn(); c = conn.cursor()
+    # screenings aggregation
+    c.execute("SELECT phq9_score, gad7_score, timestamp FROM screenings")
+    rows = c.fetchall()
+    if rows:
+        df = pd.DataFrame(rows, columns=["phq9","gad7","ts"])
+        df["ts"] = pd.to_datetime(df["ts"])
+        df["date"] = df["ts"].dt.date
+        st.subheader("Screenings over time (avg scores per day)")
+        daily = df.groupby("date").mean().reset_index()
+        chart = alt.Chart(daily).transform_fold(["phq9","gad7"], as_=["measure","value"]).mark_line(point=True).encode(
+            x="date:T", y="value:Q", color="measure:N"
         )
+        st.altair_chart(chart, use_container_width=True)
+        # distribution
+        st.subheader("Risk distribution (latest)")
+        latest = df.tail(200)
+        latest["phq9_level"] = latest["phq9"].apply(lambda x: ("severe" if x>=20 else "moderately_severe" if x>=15 else "moderate" if x>=10 else "none/mild"))
+        dist = latest["phq9_level"].value_counts().reset_index()
+        dist.columns = ["level","count"]
+        st.bar_chart(dist.set_index("level"))
+    else:
+        st.info("No screening data yet.")
 
-    for sender, msg in st.session_state["peer_chat"][selected_profile]:
-        st.markdown(f"{sender}:** {msg}")
+    st.subheader("Bookings")
+    c.execute("SELECT status, count(*) FROM bookings GROUP BY status")
+    b = c.fetchall()
+    if b:
+        dfb = pd.DataFrame(b, columns=["status","count"]).set_index("status")
+        st.table(dfb)
+    else:
+        st.info("No bookings yet.")
 
-# ------------------------------
-# 5. ADMIN DASHBOARD
-# ------------------------------
-elif choice == "Admin Dashboard":
-    st.title("📊 Admin Dashboard (Anonymous Analytics)")
-    st.write("No personal student data shown. Only trends are visible.")
+    # export anonymized CSV
+    if st.button("Export anonymized CSV (screenings)"):
+        c.execute("SELECT anon_id, phq9_score, gad7_score, timestamp FROM screenings")
+        outrows = c.fetchall()
+        dfa = pd.DataFrame(outrows, columns=["anon_id","phq9","gad7","timestamp"])
+        csv = dfa.to_csv(index=False)
+        st.download_button("Download CSV", csv, file_name="screenings_anon.csv", mime="text/csv")
 
-    plays = st.session_state.get("plays", 0)
-    data = pd.DataFrame({"Resources": ["Videos/Audio/Text"], "Plays": [plays]})
 
-    chart = alt.Chart(data).mark_bar().encode(x="Resources", y="Plays", tooltip=["Resources", "Plays"])
-    st.altair_chart(chart, use_container_width=True)
+# ---------- APP START ----------
+def main():
+    st.set_page_config(page_title="Digital Psychological Intervention System", layout="wide")
+    init_db()
+    seed_sample_resources()
 
-    st.metric("Total Resources Played", plays)
+    pages = {
+        "Home": page_home,
+        "Screening": page_screening,
+        "First-aid Chat": page_first_aid_chat,
+        "Booking": page_booking,
+        "Resources": page_resources,
+        "Peer Forum": page_forum,
+        "Admin": page_admin
+    }
+    st.sidebar.title("Navigation")
+    choice = st.sidebar.radio("Go to", list(pages.keys()))
+    # emergency message
+    st.sidebar.markdown("### Emergency / Helpline")
+    st.sidebar.write(EMERGENCY_HELPLINE)
+
+    # run selected page
+    pages[choice]()
+
+if _name_ == "_main_":
+    main()
