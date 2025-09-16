@@ -586,8 +586,62 @@ def page_home():
 
 
 def page_screening():
-    st.title("🧠 Screening")
-    st.write("Take a mental health screening test.")
+    st.header("1) Screening — PHQ-9 (depression) and GAD-7 (anxiety)")
+    with st.form("screen_form"):
+        st.write("Optional: enter a personal identifier (we will anonymize/encrypt it). Leave blank for anonymous.")
+        raw_id = st.text_input("Student ID / Roll no / Email (optional)")
+        st.markdown("### PHQ-9 questions (0=Not at all ... 3=Nearly every day)")
+        phq9_q = [
+            "Little interest or pleasure in doing things",
+            "Feeling down, depressed, or hopeless",
+            "Trouble falling or staying asleep",
+            "Feeling tired or little energy",
+            "Poor appetite or overeating",
+            "Feeling bad about yourself",
+            "Trouble concentrating",
+            "Moving or speaking slowly / restless",
+            "Thoughts of being better off dead or hurting yourself"
+        ]
+        phq9_answers = [st.selectbox(f"PHQ-9 Q{i+1}: {q}", ["0","1","2","3"], key=f"p{i}") for i,q in enumerate(phq9_q)]
+
+        st.markdown("### GAD-7 questions (0=Not at all ... 3=Nearly every day)")
+        gad7_q = [
+            "Feeling nervous, anxious or on edge",
+            "Not being able to stop worrying",
+            "Worrying too much about different things",
+            "Trouble relaxing",
+            "Being restless",
+            "Becoming easily annoyed",
+            "Feeling afraid as if something awful might happen"
+        ]
+        gad7_answers = [st.selectbox(f"GAD-7 Q{i+1}: {q}", ["0","1","2","3"], key=f"g{i}") for i,q in enumerate(gad7_q)]
+
+        submitted = st.form_submit_button("Submit screening")
+        if submitted:
+            anon = anonymize_id(raw_id) if raw_id else make_anon_tag()
+            phq9_score = score_phq9(phq9_answers)
+            gad7_score = score_gad7(gad7_answers)
+            level = risk_level_from_scores(phq9_score, gad7_score)
+            conn = get_conn()
+            c = conn.cursor()
+            meta = {"phq9_answers": phq9_answers, "gad7_answers": gad7_answers}
+            c.execute("INSERT INTO screenings (anon_id, phq9_score, gad7_score, meta, timestamp) VALUES (?, ?, ?, ?, ?)",
+                      (anon, phq9_score, gad7_score, json.dumps(meta), datetime.datetime.utcnow().isoformat()))
+            conn.commit()
+            conn.close()
+            st.success(f"Screening saved (anon id: {anon}). PHQ-9: {phq9_score}  |  GAD-7: {gad7_score}")
+            phq9_level, gad7_level = level
+            st.info(f"PHQ-9 level: **{phq9_level}**, GAD-7 level: **{gad7_level}**")
+            # brief actionable suggestions
+            if phq9_score >= 15 or gad7_score >= 15 or int(phq9_answers[-1])>0:
+                st.warning("Your responses suggest moderate-to-severe symptoms or suicidal thoughts — we recommend contacting a professional immediately.")
+                st.write(EMERGENCY_HELPLINE)
+                if st.button("Book counsellor now"):
+                    st.session_state.get("book_now", True)
+            else:
+                st.write("Here are some immediate coping suggestions:")
+                st.write("- Try breathing exercises, grounding, or a short walk.")
+                st.write("- If you'd like, talk to a counsellor. You can book an appointment below.")
 
 def page_first_aid_chat():
     st.title("💬 First-aid Chat")
@@ -682,6 +736,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
