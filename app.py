@@ -268,10 +268,10 @@ def page_screening():
                 st.write(EMERGENCY_HELPLINE)
                 if st.button("Book counsellor now"):
                     st.session_state.get("book_now", True)
-            else:
-                st.write("Here are some immediate coping suggestions:")
-                st.write("- Try breathing exercises, grounding, or a short walk.")
-                st.write("- If you'd like, talk to a counsellor. You can book an appointment below.")
+                else:
+                    st.write("Here are some immediate coping suggestions:")
+                    st.write("- Try breathing exercises, grounding, or a short walk.")
+                    st.write("- If you'd like, talk to a counsellor. You can book an appointment below.")
 
 def page_first_aid_chat():
     st.header("2) AI-guided First-Aid Chat (Supportive, not a replacement for professional care)")
@@ -488,4 +488,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
