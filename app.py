@@ -878,15 +878,15 @@ def page_admin():
 def main():
     st.set_page_config(page_title="Digital Psychological Intervention System", layout="wide")
 
-    pages = {
-        "Home": page_home,
-        "Screening": page_screening,
-        "First-aid Chat": page_first_aid_chat,
-        "Booking": page_booking,
-        "Resources": page_resources,
-        "Peer Forum": page_forum,
-        "Admin": page_admin
-    }
+    # pages = {
+    #     "Home": page_home,
+    #     "Screening": page_screening,
+    #     "First-aid Chat": page_first_aid_chat,
+    #     "Booking": page_booking,
+    #     "Resources": page_resources,
+    #     "Peer Forum": page_forum,
+    #     "Admin": page_admin
+    # }
 
     # Session state to store selected page
     if "current_page" not in st.session_state:
@@ -944,6 +944,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
