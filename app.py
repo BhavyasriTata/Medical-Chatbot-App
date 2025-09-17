@@ -923,7 +923,7 @@ def main():
                     f"""
                     <div style="
                         background-color:{card_styles[feature]};
-                        padding:40px 20px;
+                        padding:40px 30px;
                         border-radius:20px;
                         text-align:center;
                         font-size:20px;
@@ -951,6 +951,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
