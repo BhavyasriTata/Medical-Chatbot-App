@@ -451,7 +451,9 @@ def page_forum():
     # show approved posts
     conn = get_conn()
     c = conn.cursor()
-    c.execute("SELECT anon_id, content, timestamp FROM posts WHERE approved=1 ORDER BY id DESC LIMIT 30")
+    c.execute("SELECT anon_id, content, timestamp FROM posts ORDER BY id DESC LIMIT 30")
+
+    # c.execute("SELECT anon_id, content, timestamp FROM posts WHERE approved=1 ORDER BY id DESC LIMIT 30")
     for anon_id, content, ts in c.fetchall():
         st.markdown(f"{anon_id}** • {ts[:19]}")
         st.write(content)
@@ -951,6 +953,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
