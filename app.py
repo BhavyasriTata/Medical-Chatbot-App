@@ -651,7 +651,9 @@ def page_first_aid_chat():
     # Optionally fetch recent screening to guide escalation
     conn = get_conn()
     c = conn.cursor()
-    c.execute("SELECT phq9_score, gad7_score FROM screenings ORDER BY id DESC LIMIT 1")
+    c.execute("SELECT phq9, gad7 FROM screenings ORDER BY id DESC LIMIT 1")
+
+    # c.execute("SELECT phq9_score, gad7_score FROM screenings ORDER BY id DESC LIMIT 1")
     row = c.fetchone()
     last_screening = (row[0], row[1]) if row else None
 
@@ -951,6 +953,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
