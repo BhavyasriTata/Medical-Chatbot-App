@@ -443,7 +443,7 @@ def page_forum():
             conn = get_conn()
             c = conn.cursor()
             c.execute("INSERT INTO posts (anon_id, content, flagged, approved, timestamp) VALUES (?, ?, ?, ?, ?)",
-                      (anon, content.strip(), 0, 0, datetime.datetime.utcnow().isoformat()))
+                      (anon, content.strip(), 0, 1, datetime.datetime.utcnow().isoformat()))
             conn.commit()
             conn.close()
             st.success("Thanks — your post will be reviewed by moderators and published if appropriate.")
@@ -951,6 +951,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
