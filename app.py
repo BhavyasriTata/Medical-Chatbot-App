@@ -431,67 +431,107 @@ Here are some self-care tips:
 #         if r["url"]:
 #             st.markdown(f"[Open resource]({r['url']})")
 
+# def page_forum():
+#     st.header("5) Peer Support Forum (Anonymous, Moderated)")
+#     st.markdown("Post anonymously, get supportive replies from peers. Posts are moderated before being public.")
+#     # new post form
+#     with st.form("post_form"):
+#         content = st.text_area("Write your post (be respectful; anonymous):", height=120)
+#         submit = st.form_submit_button("Post")
+#         if submit and content.strip():
+#             anon = make_anon_tag()
+#             conn = get_conn()
+#             c = conn.cursor()
+#             c.execute("INSERT INTO posts (anon_id, content, flagged, approved, timestamp) VALUES (?, ?, ?, ?, ?)",
+#                       (anon, content.strip(), 0, 0, datetime.datetime.utcnow().isoformat()))
+#             conn.commit()
+#             conn.close()
+#             st.success("Thanks — your post will be reviewed by moderators and published if appropriate.")
+
+#     # show approved posts
+#     conn = get_conn()
+#     c = conn.cursor()
+
+#     c.execute("SELECT anon_id, content, timestamp FROM posts WHERE approved=1 ORDER BY id DESC LIMIT 30")
+#     for anon_id, content, ts in c.fetchall():
+#         st.markdown(f"{anon_id}** • {ts[:19]}")
+#         st.write(content)
+#     st.markdown("---")
+#     st.markdown("Flag an existing public post by its anon_id (for moderator review):")
+#     flag_id = st.text_input("Anon id to flag (e.g., anon_AB12CD)")
+#     if st.button("Flag post"):
+#         conn = get_conn()
+#         c = conn.cursor()
+#         c.execute("UPDATE posts SET flagged=1 WHERE anon_id=? AND approved=1", (flag_id,))
+#         conn.commit()
+#         st.success("Marked for moderation.")
+
+#     st.markdown("*Moderator login* — click below to moderate (password-protected)")
+#     if st.button("Moderator panel"):
+#         pw = st.text_input("Moderator password", type="password")
+#         if pw == MOD_PASSWORD:
+#             st.session_state["moderator"] = True
+#             st.success("Moderator logged in")
+#         else:
+#             st.error("Wrong password.")
+
+    # if st.session_state.get("moderator"):
+    #     st.subheader("Moderation queue (new/unapproved posts)")
+    #     conn = get_conn()
+    #     c = conn.cursor()
+    #     c.execute("SELECT id, anon_id, content, flagged, timestamp FROM posts WHERE approved=0 ORDER BY id DESC")
+    #     rows = c.fetchall()
+    #     for id_, anon_id, content, flagged, ts in rows:
+    #         st.markdown(f"{anon_id}** • {ts[:19]}")
+    #         st.write(content)
+    #         cols = st.columns([1,1,1])
+    #         if cols[0].button(f"Approve {id_}", key=f"ap_{id_}"):
+    #             conn = get_conn(); c = conn.cursor(); c.execute("UPDATE posts SET approved=1 WHERE id=?", (id_,)); conn.commit(); st.experimental_rerun()
+    #         if cols[1].button(f"Delete {id_}", key=f"del_{id_}"):
+    #             conn = get_conn(); c = conn.cursor(); c.execute("DELETE FROM posts WHERE id=?", (id_,)); conn.commit(); st.experimental_rerun()
+    #         if cols[2].button(f"Flag {id_}", key=f"flag_{id_}"):
+    #             conn = get_conn(); c = conn.cursor(); c.execute("UPDATE posts SET flagged=1 WHERE id=?", (id_,)); conn.commit(); st.experimental_rerun()
+
 def page_forum():
-    st.header("5) Peer Support Forum (Anonymous, Moderated)")
-    st.markdown("Post anonymously, get supportive replies from peers. Posts are moderated before being public.")
-    # new post form
-    with st.form("post_form"):
-        content = st.text_area("Write your post (be respectful; anonymous):", height=120)
-        submit = st.form_submit_button("Post")
-        if submit and content.strip():
-            anon = make_anon_tag()
-            conn = get_conn()
+    st.title("Peer Forum")
+
+    # --- Post submission ---
+    anon = "anon-" + str(random.randint(1000, 9999))
+    content = st.text_area("Write something...", "")
+    if st.button("Post"):
+        if content.strip():
+            conn = sqlite3.connect("data.db")
             c = conn.cursor()
-            c.execute("INSERT INTO posts (anon_id, content, flagged, approved, timestamp) VALUES (?, ?, ?, ?, ?)",
-                      (anon, content.strip(), 0, 1, datetime.datetime.utcnow().isoformat()))
+            c.execute(
+                "INSERT INTO posts (anon_id, content, flagged, approved, timestamp) VALUES (?, ?, ?, ?, ?)",
+                (anon, content.strip(), 0, 1, datetime.datetime.utcnow().isoformat()),
+            )
             conn.commit()
             conn.close()
-            st.success("Thanks — your post will be reviewed by moderators and published if appropriate.")
+            st.success("Posted successfully!")
+        else:
+            st.warning("Please write something before posting.")
 
-    # show approved posts
-    conn = get_conn()
+    # --- Show posts (no approval filter) ---
+    conn = sqlite3.connect("data.db")
     c = conn.cursor()
     c.execute("SELECT anon_id, content, timestamp FROM posts ORDER BY id DESC LIMIT 30")
+    posts = c.fetchall()
+    conn.close()
 
-    # c.execute("SELECT anon_id, content, timestamp FROM posts WHERE approved=1 ORDER BY id DESC LIMIT 30")
-    for anon_id, content, ts in c.fetchall():
-        st.markdown(f"{anon_id}** • {ts[:19]}")
-        st.write(content)
-    st.markdown("---")
-    st.markdown("Flag an existing public post by its anon_id (for moderator review):")
-    flag_id = st.text_input("Anon id to flag (e.g., anon_AB12CD)")
-    if st.button("Flag post"):
-        conn = get_conn()
-        c = conn.cursor()
-        c.execute("UPDATE posts SET flagged=1 WHERE anon_id=? AND approved=1", (flag_id,))
-        conn.commit()
-        st.success("Marked for moderation.")
+    st.subheader("Recent Posts")
+    for anon_id, content, ts in posts:
+        st.write(f"**{anon_id}** ({ts})")
+        st.info(content)
 
-    st.markdown("*Moderator login* — click below to moderate (password-protected)")
-    if st.button("Moderator panel"):
-        pw = st.text_input("Moderator password", type="password")
-        if pw == MOD_PASSWORD:
-            st.session_state["moderator"] = True
-            st.success("Moderator logged in")
-        else:
-            st.error("Wrong password.")
-
-    if st.session_state.get("moderator"):
-        st.subheader("Moderation queue (new/unapproved posts)")
-        conn = get_conn()
-        c = conn.cursor()
-        c.execute("SELECT id, anon_id, content, flagged, timestamp FROM posts WHERE approved=0 ORDER BY id DESC")
-        rows = c.fetchall()
-        for id_, anon_id, content, flagged, ts in rows:
-            st.markdown(f"{anon_id}** • {ts[:19]}")
-            st.write(content)
-            cols = st.columns([1,1,1])
-            if cols[0].button(f"Approve {id_}", key=f"ap_{id_}"):
-                conn = get_conn(); c = conn.cursor(); c.execute("UPDATE posts SET approved=1 WHERE id=?", (id_,)); conn.commit(); st.experimental_rerun()
-            if cols[1].button(f"Delete {id_}", key=f"del_{id_}"):
-                conn = get_conn(); c = conn.cursor(); c.execute("DELETE FROM posts WHERE id=?", (id_,)); conn.commit(); st.experimental_rerun()
-            if cols[2].button(f"Flag {id_}", key=f"flag_{id_}"):
-                conn = get_conn(); c = conn.cursor(); c.execute("UPDATE posts SET flagged=1 WHERE id=?", (id_,)); conn.commit(); st.experimental_rerun()
+    # --- Moderator (optional, just for flagging etc.) ---
+    with st.expander("Moderator Tools (Optional)"):
+        mod_user = st.text_input("Username")
+        mod_pass = st.text_input("Password", type="password")
+        if st.button("Login as Moderator"):
+            if mod_user == "admin" and mod_pass == "1234":
+                st.success("Logged in as moderator")
+                st.write("Moderator tools go here...")
 
 def page_admin():
     st.header("6) Admin Dashboard — Anonymous analytics")
@@ -953,6 +993,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
